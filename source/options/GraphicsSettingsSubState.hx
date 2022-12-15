@@ -31,8 +31,13 @@ using StringTools;
 
 class GraphicsSettingsSubState extends BaseOptionsMenu
 {
+	public static var instance:GraphicsSettingsSubState;
 	public function new()
 	{
+		instance = this;
+		OptionsState.optionInstance = this;
+		CoolUtil.inOptions = true;
+		
 		title = 'Graphics';
 		rpcTitle = 'Graphics Settings Menu'; //for Discord Rich Presence
 

@@ -26,29 +26,32 @@ using StringTools;
 
 class FreeplayState extends MusicBeatState
 {
-	var songs:Array<SongMetadata> = [];
+	public var songs:Array<SongMetadata> = [];
 
-	var selector:FlxText;
+	public var selector:FlxText;
 	private static var curSelected:Int = 0;
-	var curDifficulty:Int = -1;
+	public var curDifficulty:Int = -1;
 	private static var lastDifficultyName:String = '';
 
-	var scoreBG:FlxSprite;
-	var scoreText:FlxText;
-	var diffText:FlxText;
-	var lerpScore:Int = 0;
-	var lerpRating:Float = 0;
-	var intendedScore:Int = 0;
-	var intendedRating:Float = 0;
+	public var scoreBG:FlxSprite;
+	public var scoreText:FlxText;
+	public var diffText:FlxText;
+	public var lerpScore:Int = 0;
+	public var lerpRating:Float = 0;
+	public var intendedScore:Int = 0;
+	public var intendedRating:Float = 0;
 
 	private var grpSongs:FlxTypedGroup<Alphabet>;
 	private var curPlaying:Bool = false;
 
 	private var iconArray:Array<HealthIcon> = [];
 
-	var bg:FlxSprite;
-	var intendedColor:Int;
-	var colorTween:FlxTween;
+	public var bg:FlxSprite;
+	public var intendedColor:Int;
+	public var colorTween:FlxTween;
+	
+	public static var instance:FreeplayState;
+	public static var substateInstance:GameplayChangersSubstate;
 
 	override function create()
 	{
@@ -63,6 +66,11 @@ class FreeplayState extends MusicBeatState
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
 		#end
+		
+		instance = this;
+		FunkinLua.curInstance = this;
+		CoolUtil.curLuaState = 'freeplaystate';
+		initLua(false);
 
 		for (i in 0...WeekData.weeksList.length) {
 			if(weekIsLocked(WeekData.weeksList[i])) continue;
@@ -198,9 +206,13 @@ class FreeplayState extends MusicBeatState
 		text.scrollFactor.set();
 		add(text);
 		super.create();
+		
+		add(luaDebugGroup);
+		callOnLuas('onCreatePost', []);
 	}
 
 	override function closeSubState() {
+		substateInstance = null;
 		changeSelection(0, false);
 		persistentUpdate = true;
 		super.closeSubState();
@@ -208,7 +220,9 @@ class FreeplayState extends MusicBeatState
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int)
 	{
-		songs.push(new SongMetadata(songName, weekNum, songCharacter, color));
+		var ret:Dynamic = callOnLuas('onAddSong', [songName, weekNum, songCharacter, color], false); //so you can filter certain songs
+		if(ret != FunkinLua.Function_Stop)
+			songs.push(new SongMetadata(songName, weekNum, songCharacter, color));
 	}
 
 	function weekIsLocked(name:String):Bool {
@@ -232,11 +246,12 @@ class FreeplayState extends MusicBeatState
 		}
 	}*/
 
-	var instPlaying:Int = -1;
+	public var instPlaying:Int = -1;
 	public static var vocals:FlxSound = null;
-	var holdTime:Float = 0;
+	public var holdTime:Float = 0;
 	override function update(elapsed:Float)
 	{
+		callOnLuas('onUpdate', [elapsed]);
 		if (FlxG.sound.music.volume < 0.7)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
@@ -310,15 +325,21 @@ class FreeplayState extends MusicBeatState
 		else if (controls.UI_RIGHT_P)
 			changeDiff(1);
 		else if (upP || downP) changeDiff();
-
+		
 		if (controls.BACK)
 		{
-			persistentUpdate = false;
-			if(colorTween != null) {
-				colorTween.cancel();
+			var ret:Dynamic = callOnLuas('onExit', [], false);
+			if(ret != FunkinLua.Function_Stop)
+			{
+				persistentUpdate = false;
+				if(colorTween != null) {
+					colorTween.cancel();
+				}
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				var ret:Dynamic = callOnLuas('onExitPost', [], false);
+				if(ret != FunkinLua.Function_Stop)
+					MusicBeatState.switchState(new MainMenuState());
 			}
-			FlxG.sound.play(Paths.sound('cancelMenu'));
-			MusicBeatState.switchState(new MainMenuState());
 		}
 
 		if(ctrl)
@@ -354,46 +375,56 @@ class FreeplayState extends MusicBeatState
 
 		else if (accepted)
 		{
-			persistentUpdate = false;
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-			/*#if MODS_ALLOWED
-			if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
-			#else
-			if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
-			#end
-				poop = songLowercase;
-				curDifficulty = 1;
-				trace('Couldnt find file');
-			}*/
-			trace(poop);
-
-			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
-			PlayState.isStoryMode = false;
-			PlayState.storyDifficulty = curDifficulty;
-
-			trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
-			if(colorTween != null) {
-				colorTween.cancel();
-			}
+			var ret:Dynamic = callOnLuas('onSongPicked', [songLowercase, curDifficulty, FlxG.keys.pressed.SHIFT], false); //you could do a character select state no way
 			
-			if (FlxG.keys.pressed.SHIFT){
-				LoadingState.loadAndSwitchState(new ChartingState());
-			}else{
-				LoadingState.loadAndSwitchState(new PlayState());
-			}
+			if(ret != FunkinLua.Function_Stop)
+			{
+				persistentUpdate = false;
+				/*#if MODS_ALLOWED
+				if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
+				#else
+				if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
+				#end
+					poop = songLowercase;
+					curDifficulty = 1;
+					trace('Couldnt find file');
+				}*/
+				trace(poop);
 
-			FlxG.sound.music.volume = 0;
-					
-			destroyFreeplayVocals();
+				PlayState.SONG = Song.loadFromJson(poop, songLowercase);
+				PlayState.isStoryMode = false;
+				PlayState.storyDifficulty = curDifficulty;
+
+				trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
+				if(colorTween != null) {
+					colorTween.cancel();
+				}
+				ret = callOnLuas('onSongLoad', [songLowercase, curDifficulty, FlxG.keys.pressed.SHIFT], false);
+				if(ret != FunkinLua.Function_Stop)
+				{
+					if (FlxG.keys.pressed.SHIFT){
+						LoadingState.loadAndSwitchState(new ChartingState());
+					}else{
+						LoadingState.loadAndSwitchState(new PlayState());
+					}
+				}
+
+				FlxG.sound.music.volume = 0;
+						
+				destroyFreeplayVocals();
+			}
 		}
 		else if(controls.RESET)
 		{
+			callOnLuas('onSongResetScore', []);
 			persistentUpdate = false;
 			openSubState(new ResetScoreSubState(songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter));
 			FlxG.sound.play(Paths.sound('scrollMenu'));
 		}
 		super.update(elapsed);
+		callOnLuas('onUpdatePost', [elapsed]);
 	}
 
 	public static function destroyFreeplayVocals() {
@@ -406,6 +437,7 @@ class FreeplayState extends MusicBeatState
 
 	function changeDiff(change:Int = 0)
 	{
+		callOnLuas('onChangeDifficulty', [change]);
 		curDifficulty += change;
 
 		if (curDifficulty < 0)
@@ -423,10 +455,12 @@ class FreeplayState extends MusicBeatState
 		PlayState.storyDifficulty = curDifficulty;
 		diffText.text = '< ' + CoolUtil.difficultyString() + ' >';
 		positionHighscore();
+		callOnLuas('onChangeDifficultyPost', [change, CoolUtil.difficultyString(), curDifficulty]);
 	}
 
 	function changeSelection(change:Int = 0, playSound:Bool = true)
 	{
+		callOnLuas('onChangeSelection', [change, playSound]);
 		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 
 		curSelected += change;
@@ -522,6 +556,7 @@ class FreeplayState extends MusicBeatState
 		{
 			curDifficulty = newPos;
 		}
+		callOnLuas('onChangeSelectionPost', [change, playSound]);
 	}
 
 	private function positionHighscore() {

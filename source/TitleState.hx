@@ -83,11 +83,21 @@ class TitleState extends MusicBeatState
 	var titleJSON:TitleData;
 
 	public static var updateVersion:String = '';
+	
+	public static var instance:TitleState;
+	
+	var dontCreateTitle:Bool = false;
 
 	override public function create():Void
 	{
 		Paths.clearStoredMemory();
 		Paths.clearUnusedMemory();
+		
+		ConditionalManager.init();
+	
+		instance = this;
+		FunkinLua.curInstance = this;
+		CoolUtil.curLuaState = 'titlestate';
 
 		#if LUA_ALLOWED
 		Paths.pushGlobalMods();
@@ -131,33 +141,38 @@ class TitleState extends MusicBeatState
 
 		ClientPrefs.loadPrefs();
 
-		#if CHECK_FOR_UPDATES
-		if(ClientPrefs.checkForUpdates && !closedState) {
-			trace('checking for update');
-			var http = new haxe.Http("https://raw.githubusercontent.com/ShadowMario/FNF-PsychEngine/main/gitVersion.txt");
+		if(ConditionalManager.CHECK_FOR_UPDATES) {
+			if(ClientPrefs.checkForUpdates && !closedState) {
+				trace('checking for update');
+				var http = new haxe.Http("https://raw.githubusercontent.com/mayo78/FNF-PsychEngine-BambiAddon/main/gitVersion.txt");
 
-			http.onData = function (data:String)
-			{
-				updateVersion = data.split('\n')[0].trim();
-				var curVersion:String = MainMenuState.psychEngineVersion.trim();
-				trace('version online: ' + updateVersion + ', your version: ' + curVersion);
-				if(updateVersion != curVersion) {
-					trace('versions arent matching!');
-					mustUpdate = true;
+				http.onData = function (data:String)
+				{
+					updateVersion = data.split('\n')[0].trim();
+					var curVersion:String = MainMenuState.psychEngineVersion.trim();
+					trace('version online: ' + updateVersion + ', your version: ' + curVersion);
+					if(updateVersion != curVersion) {
+						trace('versions arent matching!');
+						mustUpdate = true;
+					}
 				}
-			}
 
-			http.onError = function (error) {
-				trace('error: $error');
-			}
+				http.onError = function (error) {
+					trace('error: $error');
+				}
 
-			http.request();
+				http.request();
+			}
 		}
-		#end
 
 		Highscore.load();
+		
+		initLua(false);
 
 		// IGNORE THIS!!!
+		var ret:Dynamic = callOnLuas('onCreateTitle', [], false); //basically the only title where you can prevent it from being created, because its the initial state!
+		//maybe i could've done a txt file that says the initial state but whatever this works
+		dontCreateTitle = ret == FunkinLua.Function_Stop;
 		titleJSON = Json.parse(Paths.getTextFromFile('images/gfDanceTitle.json'));
 
 		#if TITLE_SCREEN_EASTER_EGG
@@ -217,6 +232,9 @@ class TitleState extends MusicBeatState
 			}
 		}
 		#end
+		
+		
+		add(luaDebugGroup);
 	}
 
 	var logoBl:FlxSprite;
@@ -227,6 +245,7 @@ class TitleState extends MusicBeatState
 
 	function startIntro()
 	{
+		callOnLuas('onIntroStart', []);
 		if (!initialized)
 		{
 			/*var diamond:FlxGraphic = FlxGraphic.fromClass(GraphicTransTileDiamond);
@@ -257,7 +276,9 @@ class TitleState extends MusicBeatState
 
 		Conductor.changeBPM(titleJSON.bpm);
 		persistentUpdate = true;
-
+		
+		if(!dontCreateTitle)
+		{
 		var bg:FlxSprite = new FlxSprite();
 
 		if (titleJSON.backgroundSprite != null && titleJSON.backgroundSprite.length > 0 && titleJSON.backgroundSprite != "none"){
@@ -396,12 +417,17 @@ class TitleState extends MusicBeatState
 		ngSpr.antialiasing = ClientPrefs.globalAntialiasing;
 
 		FlxTween.tween(credTextShit, {y: credTextShit.y + 20}, 2.9, {ease: FlxEase.quadInOut, type: PINGPONG});
-
+		
 		if (initialized)
 			skipIntro();
 		else
 			initialized = true;
-
+		}
+		else
+		{
+			initialized = true;
+			skipIntro();
+		}
 		// credGroup.add(credTextShit);
 	}
 
@@ -428,11 +454,12 @@ class TitleState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+    callOnLuas('onUpdate', [elapsed]);
 		if (FlxG.sound.music != null)
 			Conductor.songPosition = FlxG.sound.music.time;
 		// FlxG.watch.addQuick('amp', FlxG.sound.music.amplitude);
 
-		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER || controls.ACCEPT;
+		var pressedEnter:Bool = (FlxG.keys.justPressed.ENTER || controls.ACCEPT);
 
 		#if mobile
 		for (touch in FlxG.touches.list)
@@ -443,6 +470,7 @@ class TitleState extends MusicBeatState
 			}
 		}
 		#end
+		setOnLuas('pressedEnter', pressedEnter);
 
 		var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
 
@@ -463,8 +491,7 @@ class TitleState extends MusicBeatState
 		}
 
 		// EASTER EGG
-
-		if (initialized && !transitioning && skippedIntro)
+		if (initialized && !transitioning && skippedIntro && !dontCreateTitle)
 		{
 			if (newTitle && !pressedEnter)
 			{
@@ -496,7 +523,9 @@ class TitleState extends MusicBeatState
 					if (mustUpdate) {
 						MusicBeatState.switchState(new OutdatedState());
 					} else {
+						trace('gonna open :)');
 						MusicBeatState.switchState(new MainMenuState());
+						trace('YAY BFDIA 6!');
 					}
 					closedState = true;
 				});
@@ -554,7 +583,7 @@ class TitleState extends MusicBeatState
 			#end
 		}
 
-		if (initialized && pressedEnter && !skippedIntro)
+		if (initialized && pressedEnter && !skippedIntro && !dontCreateTitle)
 		{
 			skipIntro();
 		}
@@ -566,9 +595,12 @@ class TitleState extends MusicBeatState
 		}
 
 		super.update(elapsed);
+		
+		
+    callOnLuas('onUpdatePost', [elapsed]);
 	}
 
-	function createCoolText(textArray:Array<String>, ?offset:Float = 0)
+	public function createCoolText(textArray:Array<String>, ?offset:Float = 0)
 	{
 		for (i in 0...textArray.length)
 		{
@@ -582,7 +614,7 @@ class TitleState extends MusicBeatState
 		}
 	}
 
-	function addMoreText(text:String, ?offset:Float = 0)
+	public function addMoreText(text:String, ?offset:Float = 0)
 	{
 		if(textGroup != null && credGroup != null) {
 			var coolText:Alphabet = new Alphabet(0, 0, text, true);
@@ -593,7 +625,7 @@ class TitleState extends MusicBeatState
 		}
 	}
 
-	function deleteCoolText()
+	public function deleteCoolText()
 	{
 		while (textGroup.members.length > 0)
 		{
@@ -604,6 +636,7 @@ class TitleState extends MusicBeatState
 
 	private var sickBeats:Int = 0; //Basically curBeat but won't be skipped if you hold the tab or resize the screen
 	public static var closedState:Bool = false;
+	public var customText:Bool = false;
 	override function beatHit()
 	{
 		super.beatHit();
@@ -619,83 +652,91 @@ class TitleState extends MusicBeatState
 				gfDance.animation.play('danceLeft');
 		}
 
-		if(!closedState) {
+		if(!closedState && !dontCreateTitle) {
 			sickBeats++;
-			switch (sickBeats)
+			if(!customText)
 			{
-				case 1:
-					//FlxG.sound.music.stop();
-					FlxG.sound.playMusic(Paths.music('freakyMenu'), 0);
-					FlxG.sound.music.fadeIn(4, 0, 0.7);
-				case 2:
-					#if PSYCH_WATERMARKS
-					createCoolText(['Psych Engine by'], 15);
-					#else
-					createCoolText(['ninjamuffin99', 'phantomArcade', 'kawaisprite', 'evilsk8er']);
-					#end
-				// credTextShit.visible = true;
-				case 4:
-					#if PSYCH_WATERMARKS
-					addMoreText('Shadow Mario', 15);
-					addMoreText('RiverOaken', 15);
-					addMoreText('shubs', 15);
-					#else
-					addMoreText('present');
-					#end
-				// credTextShit.text += '\npresent...';
-				// credTextShit.addText();
-				case 5:
-					deleteCoolText();
-				// credTextShit.visible = false;
-				// credTextShit.text = 'In association \nwith';
-				// credTextShit.screenCenter();
-				case 6:
-					#if PSYCH_WATERMARKS
-					createCoolText(['Not associated', 'with'], -40);
-					#else
-					createCoolText(['In association', 'with'], -40);
-					#end
-				case 8:
-					addMoreText('newgrounds', -40);
-					ngSpr.visible = true;
-				// credTextShit.text += '\nNewgrounds';
-				case 9:
-					deleteCoolText();
-					ngSpr.visible = false;
-				// credTextShit.visible = false;
+				switch (sickBeats)
+				{
+					case 1:
+						//FlxG.sound.music.stop();
+						startMusic();
+					case 2:
+						#if PSYCH_WATERMARKS
+						createCoolText(['Psych Engine by'], 15);
+						#else
+						createCoolText(['ninjamuffin99', 'phantomArcade', 'kawaisprite', 'evilsk8er']);
+						#end
+					// credTextShit.visible = true;
+					case 4:
+						#if PSYCH_WATERMARKS
+						addMoreText('Shadow Mario', 15);
+						addMoreText('RiverOaken', 15);
+						addMoreText('shubs', 15);
+						#else
+						addMoreText('present');
+						#end
+					// credTextShit.text += '\npresent...';
+					// credTextShit.addText();
+					case 5:
+						deleteCoolText();
+					// credTextShit.visible = false;
+					// credTextShit.text = 'In association \nwith';
+					// credTextShit.screenCenter();
+					case 6:
+						#if PSYCH_WATERMARKS
+						createCoolText(['Not associated', 'with'], -40);
+						#else
+						createCoolText(['In association', 'with'], -40);
+						#end
+					case 8:
+						addMoreText('newgrounds', -40);
+						ngSpr.visible = true;
+					// credTextShit.text += '\nNewgrounds';
+					case 9:
+						deleteCoolText();
+						ngSpr.visible = false;
+					// credTextShit.visible = false;
 
-				// credTextShit.text = 'Shoutouts Tom Fulp';
-				// credTextShit.screenCenter();
-				case 10:
-					createCoolText([curWacky[0]]);
-				// credTextShit.visible = true;
-				case 12:
-					addMoreText(curWacky[1]);
-				// credTextShit.text += '\nlmao';
-				case 13:
-					deleteCoolText();
-				// credTextShit.visible = false;
-				// credTextShit.text = "Friday";
-				// credTextShit.screenCenter();
-				case 14:
-					addMoreText('Friday');
-				// credTextShit.visible = true;
-				case 15:
-					addMoreText('Night');
-				// credTextShit.text += '\nNight';
-				case 16:
-					addMoreText('Funkin'); // credTextShit.text += '\nFunkin';
+					// credTextShit.text = 'Shoutouts Tom Fulp';
+					// credTextShit.screenCenter();
+					case 10:
+						createCoolText([curWacky[0]]);
+					// credTextShit.visible = true;
+					case 12:
+						addMoreText(curWacky[1]);
+					// credTextShit.text += '\nlmao';
+					case 13:
+						deleteCoolText();
+					// credTextShit.visible = false;
+					// credTextShit.text = "Friday";
+					// credTextShit.screenCenter();
+					case 14:
+						addMoreText('Friday');
+					// credTextShit.visible = true;
+					case 15:
+						addMoreText('Night');
+					// credTextShit.text += '\nNight';
+					case 16:
+						addMoreText('Funkin'); // credTextShit.text += '\nFunkin';
 
-				case 17:
-					skipIntro();
+					case 17:
+						skipIntro();
+				}
 			}
+			callOnLuas('sickBeatHit', [sickBeats]);
 		}
 	}
-
+	public function startMusic()
+	{
+		FlxG.sound.playMusic(Paths.music('freakyMenu'), 0);
+		FlxG.sound.music.fadeIn(4, 0, 0.7);
+	}
 	var skippedIntro:Bool = false;
 	var increaseVolume:Bool = false;
-	function skipIntro():Void
+	public function skipIntro():Void
 	{
+		callOnLuas('onSkipIntro', []);
 		if (!skippedIntro)
 		{
 			if (playJingle) //Ignore deez
@@ -752,7 +793,7 @@ class TitleState extends MusicBeatState
 				}
 				playJingle = false;
 			}
-			else //Default! Edit this one!!
+			else if(!dontCreateTitle) //Default! Edit this one!!
 			{
 				remove(ngSpr);
 				remove(credGroup);

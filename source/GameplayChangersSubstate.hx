@@ -36,6 +36,8 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
 	private var grpTexts:FlxTypedGroup<AttachedText>;
+	
+	public static var instance:GameplayChangersSubstate;
 
 	function getOptions()
 	{
@@ -94,6 +96,8 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 		var option:GameplayOption = new GameplayOption('Botplay', 'botplay', 'bool', false);
 		optionsArray.push(option);
+		
+		FunkinLua.curInstance.callOnLuas('getOptions', []);
 	}
 
 	public function getOptionByName(name:String)
@@ -110,6 +114,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	public function new()
 	{
 		super();
+		
+		FreeplayState.instance.callOnLuas('gameplayChangersCreate', []);
+		FreeplayState.substateInstance = this;
 		
 		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		bg.alpha = 0.6;
@@ -160,6 +167,8 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 		changeSelection();
 		reloadCheckboxes();
+		
+		FreeplayState.instance.callOnLuas('gameplayChangersCreatePost', []);
 	}
 
 	var nextAccept:Int = 5;
@@ -378,8 +387,35 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			checkbox.daValue = (optionsArray[checkbox.ID].getValue() == true);
 		}
 	}
+	
+	public function addOption(o:GameplayOptionLua)
+	{
+		var option:GameplayOption = new GameplayOption(o.name, o.variable, o.type, o.defaultValue, o.options);
+		option.text = o.text;
+		option.showBoyfriend = CoolUtil.notNull(o.showBoyfriend, false);
+		option.changeValue = CoolUtil.notNull(o.changeValue, false);
+		option.minValue = o.minValue;
+		option.maxValue = o.maxValue;
+		option.decimals = CoolUtil.notNull(o.decimals, 1);
+		option.displayFormat = CoolUtil.notNull(o.displayFormat, '%v');
+		optionsArray.push(option);
+	}
 }
-
+typedef GameplayOptionLua = {
+	text:String,
+	type:String,
+	showBoyfriend:Null<Bool>,
+	scrollSpeed:Null<Float>,
+	variable:String,
+	defaultValue:Dynamic,
+	options:Array<String>,
+	changeValue:Dynamic,
+	minValue:Dynamic,
+	maxValue:Dynamic,
+	decimals:Null<Int>,
+	displayFormat:String,
+	name:String
+}
 class GameplayOption
 {
 	private var child:Alphabet;
@@ -456,10 +492,11 @@ class GameplayOption
 
 	public function change()
 	{
-		//nothing lol
+		//SOMETHING lol
 		if(onChange != null) {
 			onChange();
 		}
+		FunkinLua.curInstance.callOnLuas('onChangeOption', [name, variable, type]);
 	}
 
 	public function getValue():Dynamic

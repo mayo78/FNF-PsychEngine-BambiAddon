@@ -14,6 +14,18 @@ import flixel.util.FlxGradient;
 import flixel.FlxState;
 import flixel.FlxCamera;
 import flixel.FlxBasic;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import FunkinLua;
+import flixel.system.FlxSound;
+import flixel.util.FlxSave;
+
+
+#if sys
+import sys.FileSystem;
+import sys.io.File;
+#end
+
+using StringTools;
 
 class MusicBeatState extends FlxUIState
 {
@@ -28,6 +40,29 @@ class MusicBeatState extends FlxUIState
 	private var controls(get, never):Controls;
 
 	public static var camBeat:FlxCamera;
+	
+	//lua stuff
+	public static var instance:MusicBeatState;
+	public var luaArray:Array<FunkinLua> = [];
+	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
+	
+	#if (haxe >= "4.0.0")
+	public var variables:Map<String, Dynamic> = new Map();
+	public var modchartTweens:Map<String, FlxTween> = new Map<String, FlxTween>();
+	public var modchartSprites:Map<String, ModchartSprite> = new Map<String, ModchartSprite>();
+	public var modchartTimers:Map<String, FlxTimer> = new Map<String, FlxTimer>();
+	public var modchartSounds:Map<String, FlxSound> = new Map<String, FlxSound>();
+	public var modchartTexts:Map<String, ModchartText> = new Map<String, ModchartText>();
+	public var modchartSaves:Map<String, FlxSave> = new Map<String, FlxSave>();
+	#else
+	public var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
+	public var modchartTweens:Map<String, FlxTween> = new Map();
+	public var modchartSprites:Map<String, ModchartSprite> = new Map();
+	public var modchartTimers:Map<String, FlxTimer> = new Map();
+	public var modchartSounds:Map<String, FlxSound> = new Map();
+	public var modchartTexts:Map<String, ModchartText> = new Map();
+	public var modchartSaves:Map<String, FlxSave> = new Map();
+	#end
 
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;
@@ -41,6 +76,8 @@ class MusicBeatState extends FlxUIState
 			openSubState(new CustomFadeTransition(0.7, true));
 		}
 		FlxTransitionableState.skipNextTransOut = false;
+		
+		callOnLuas('onCreatePost', []);
 	}
 
 	override function update(elapsed:Float)
@@ -120,6 +157,7 @@ class MusicBeatState extends FlxUIState
 
 	public static function switchState(nextState:FlxState) {
 		// Custom made Trans in
+		// callOnLuas('onSwitchState', [Std.string(nextState)]);
 		var curState:Dynamic = FlxG.state;
 		var leState:MusicBeatState = curState;
 		if(!FlxTransitionableState.skipNextTransIn) {
@@ -135,6 +173,7 @@ class MusicBeatState extends FlxUIState
 				};
 				//trace('changed state');
 			}
+			// callOnLuas('onSwitchStatePost', [Std.string(nextState)]);
 			return;
 		}
 		FlxTransitionableState.skipNextTransIn = false;
@@ -155,16 +194,22 @@ class MusicBeatState extends FlxUIState
 	{
 		if (curStep % 4 == 0)
 			beatHit();
+		setOnLuas('curStep', curStep);
+		callOnLuas('onStepHit', []);
 	}
 
 	public function beatHit():Void
 	{
 		//trace('Beat: ' + curBeat);
+		setOnLuas('curBeat', curBeat); //DAWGG?????
+		callOnLuas('onBeatHit', []);
 	}
 
 	public function sectionHit():Void
 	{
 		//trace('Section: ' + curSection + ', Beat: ' + curBeat + ', Step: ' + curStep);
+		setOnLuas('curSection', curSection);
+		callOnLuas('onSectionHit', []);
 	}
 
 	function getBeatsOnSection()
@@ -172,5 +217,151 @@ class MusicBeatState extends FlxUIState
 		var val:Null<Float> = 4;
 		if(PlayState.SONG != null && PlayState.SONG.notes[curSection] != null) val = PlayState.SONG.notes[curSection].sectionBeats;
 		return val == null ? 4 : val;
+	}
+	
+	public function initLua(?includeDebugGroup:Bool = true)
+	{
+		trace('initing lua :) curstate', CoolUtil.curLuaState);
+		#if LUA_ALLOWED
+		luaDebugGroup = new FlxTypedGroup<DebugLuaText>();
+		if(includeDebugGroup)
+			add(luaDebugGroup);
+
+		// STATE SPECIFIC SCRIPTS
+		var idiotState:String =  CoolUtil.curLuaState + '/';
+		var filesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/'+ idiotState)];
+
+		if(ConditionalManager.MODS_ALLOWED)
+		{
+			foldersToCheck.insert(0, Paths.mods('scripts/'+ idiotState));
+			if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+				foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'+ idiotState));
+
+			for(mod in Paths.getGlobalMods())
+				foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'+ idiotState));
+		}
+		
+		// // ADD OTHER GLOBAL SCRIPTS
+		// var filesPushed:Array<String> = [];
+		// var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/')];
+		// 
+		// #if MODS_ALLOWED
+		// foldersToCheck.insert(0, Paths.mods('scripts/'));
+		// if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+		// 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
+		// 
+		// for(mod in Paths.getGlobalMods())
+		// 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
+		// #end
+
+		for (folder in foldersToCheck)
+		{
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					if(file.endsWith('.lua') && !filesPushed.contains(file))
+					{
+						addNewLua(folder + file);
+						filesPushed.push(file);
+					}
+				}
+			}
+		}
+		
+		callOnLuas('onInitLua', []); //maybe???
+		#end
+	}
+	
+	public function addTextToDebug(text:String, color:FlxColor) {
+		#if LUA_ALLOWED
+		luaDebugGroup.forEachAlive(function(spr:DebugLuaText) {
+			spr.y += 20;
+		});
+
+		if(luaDebugGroup.members.length > 34) {
+			var blah = luaDebugGroup.members[34];
+			blah.destroy();
+			luaDebugGroup.remove(blah);
+		}
+		luaDebugGroup.insert(0, new DebugLuaText(text, luaDebugGroup, color));
+		#end
+	}
+	
+	public function getLuaObject(tag:String, text:Bool=true):FlxSprite {
+		if(modchartSprites.exists(tag)) return modchartSprites.get(tag);
+		if(text && modchartTexts.exists(tag)) return modchartTexts.get(tag);
+		if(variables.exists(tag)) return variables.get(tag);
+		return null;
+	}
+	var luaDestroyed:Bool = false;
+	public function destroyLua():Void
+	{
+		if(!luaDestroyed)
+		{
+			for (lua in luaArray) {
+				lua.call('onDestroy', []);
+				lua.stop();
+			}
+			luaArray = [];
+
+			#if hscript
+			if(FunkinLua.hscript != null) FunkinLua.hscript = null;
+			#end
+		}
+		luaDestroyed = true;
+	}
+	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null):Dynamic {
+		var returnVal:Dynamic = FunkinLua.Function_Continue;
+		#if LUA_ALLOWED
+		if(exclusions == null) exclusions = [];
+		for (script in luaArray) {
+			if(exclusions.contains(script.scriptName))
+				continue;
+
+			var ret:Dynamic = script.call(event, args);
+			if(ret == FunkinLua.Function_StopLua && !ignoreStops)
+				break;
+			
+			// had to do this because there is a bug in haxe where Stop != Continue doesnt work
+			var bool:Bool = ret == FunkinLua.Function_Continue;
+			if(!bool && ret != 0) {
+				returnVal = cast ret;
+			}
+			
+			script.call('onCall', [event, args]);
+		}
+		#end
+		//trace(event, returnVal);
+		return returnVal;
+	}
+
+	public function setOnLuas(variable:String, arg:Dynamic) {
+		#if LUA_ALLOWED
+		for (i in 0...luaArray.length) {
+			luaArray[i].set(variable, arg);
+		}
+		#end
+	}
+	
+	public function addNewLua(path:String):FunkinLua
+	{
+		var newLua:FunkinLua = new FunkinLua(path);
+		luaArray.push(newLua);
+		newLua.call('onPush', []);
+		return newLua;
+	}
+	
+	public function setDebugTextOnTop():Void
+	{
+		remove(luaDebugGroup);
+		add(luaDebugGroup);
+	}
+	
+	override function destroy():Void
+	{
+		destroyLua();
+		super.destroy();
 	}
 }

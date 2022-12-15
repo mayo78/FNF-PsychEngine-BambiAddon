@@ -23,6 +23,23 @@ import Controls;
 
 using StringTools;
 
+typedef OptionsData = {
+	name:String,
+	description:String,
+	variable:String,
+	type:String,
+	defaultValue:Dynamic,
+	options:Array<String>,
+	text:String,
+	showBoyfriend:Null<Bool>,
+	scrollSpeed:Null<Float>,
+	changeValue:Dynamic,
+	minValue:Dynamic,
+	maxValue:Dynamic,
+	decimals:Null<Int>,
+	displayFormat:String
+}
+
 class Option
 {
 	private var child:Alphabet;
@@ -49,8 +66,10 @@ class Option
 	public var displayFormat:String = '%v'; //How String/Float/Percent/Int values are shown, %v = Current value, %d = Default value
 	public var description:String = '';
 	public var name:String = 'Unknown';
+	
+	private var isLua:Bool = false;
 
-	public function new(name:String, description:String = '', variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null)
+	public function new(name:String, description:String = '', variable:String, type:String = 'bool', defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null, ?isLua:Bool = false)
 	{
 		this.name = name;
 		this.description = description;
@@ -58,6 +77,7 @@ class Option
 		this.type = type;
 		this.defaultValue = defaultValue;
 		this.options = options;
+		this.isLua = isLua;
 
 		if(defaultValue == 'null variable value')
 		{
@@ -105,15 +125,21 @@ class Option
 		if(onChange != null) {
 			onChange();
 		}
+		FunkinLua.curInstance.callOnLuas('onOptionChange', [name, variable, type]);
 	}
 
 	public function getValue():Dynamic
 	{
+		if(isLua)
+			return ClientPrefs.luaPrefs.get(variable);
 		return Reflect.getProperty(ClientPrefs, variable);
 	}
 	public function setValue(value:Dynamic)
 	{
-		Reflect.setProperty(ClientPrefs, variable, value);
+		if(isLua)
+			ClientPrefs.luaPrefs.set(variable, value);
+		else
+			Reflect.setProperty(ClientPrefs, variable, value);
 	}
 
 	public function setChild(child:Alphabet)

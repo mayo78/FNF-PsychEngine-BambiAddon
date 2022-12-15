@@ -29,8 +29,15 @@ using StringTools;
 
 class GameplaySettingsSubState extends BaseOptionsMenu
 {
+
+	public static var instance:GameplaySettingsSubState;
+	
 	public function new()
 	{
+		instance = this;
+		OptionsState.optionInstance = this;
+		CoolUtil.inOptions = true;
+		
 		title = 'Gameplay Settings';
 		rpcTitle = 'Gameplay Settings Menu'; //for Discord Rich Presence
 

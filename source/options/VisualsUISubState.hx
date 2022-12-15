@@ -29,8 +29,13 @@ using StringTools;
 
 class VisualsUISubState extends BaseOptionsMenu
 {
+	public static var instance:VisualsUISubState;
 	public function new()
 	{
+		instance = this;
+		OptionsState.optionInstance = this;
+		CoolUtil.inOptions = true;
+		
 		title = 'Visuals and UI';
 		rpcTitle = 'Visuals & UI Settings Menu'; //for Discord Rich Presence
 

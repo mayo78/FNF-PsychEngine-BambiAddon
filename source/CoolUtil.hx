@@ -25,6 +25,14 @@ class CoolUtil
 	public static var defaultDifficulty:String = 'Normal'; //The chart that has no suffix and starting difficulty on Freeplay/Story Mode
 
 	public static var difficulties:Array<String> = [];
+	
+	public static var curLuaState:String = '';
+	
+	public static var inCustomState:Bool = false;
+	
+	public static var globalLuaVariables:Map<String, Dynamic> = new Map<String, Dynamic>();
+	
+	public static var inOptions:Bool = false;
 
 	inline public static function quantize(f:Float, snap:Float){
 		// changed so this actually works lol
@@ -138,4 +146,7 @@ class CoolUtil
 		FlxG.openURL(site);
 		#end
 	}
+	
+	inline public static function notNull(var1:Dynamic, var2:Dynamic):Dynamic //returns whichever thing is not null
+		return (var1 == null) ? var2 : var1;
 }

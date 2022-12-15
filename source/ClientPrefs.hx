@@ -87,6 +87,8 @@ class ClientPrefs {
 		'debug_2'		=> [EIGHT, NONE]
 	];
 	public static var defaultKeys:Map<String, Array<FlxKey>> = null;
+	
+	public static var luaPrefs:Map<String,Dynamic> = new Map<String,Dynamic>();
 
 	public static function loadDefaultKeys() {
 		defaultKeys = keyBinds.copy();

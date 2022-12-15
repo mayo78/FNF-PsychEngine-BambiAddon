@@ -45,7 +45,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public var rpcTitle:String;
 
 	public function new()
-	{
+	{	
+		callOnLuas('onOptionsAdded', []);
 		super();
 
 		if(title == null) title = 'Options';
@@ -128,6 +129,20 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public function addOption(option:Option) {
 		if(optionsArray == null || optionsArray.length < 1) optionsArray = [];
 		optionsArray.push(option);
+	}
+	
+	public function addOptionByData(o:Option.OptionsData)
+	{
+		var option:Option = new Option(o.name, o.description, o.variable, o.type, CoolUtil.notNull(o.defaultValue, 'null variable value'), o.options, true);
+		option.text = o.text;
+		option.showBoyfriend = CoolUtil.notNull(o.showBoyfriend, false);
+		option.scrollSpeed = CoolUtil.notNull(o.scrollSpeed, 50);
+		option.changeValue = CoolUtil.notNull(o.changeValue, 1);
+		option.minValue = o.minValue;
+		option.maxValue = o.maxValue;
+		option.decimals = CoolUtil.notNull(o.decimals, 1);
+		option.displayFormat = CoolUtil.notNull(o.displayFormat, '%v');
+		addOption(option);
 	}
 
 	var nextAccept:Int = 5;

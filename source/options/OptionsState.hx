@@ -29,12 +29,23 @@ using StringTools;
 
 class OptionsState extends MusicBeatState
 {
-	var options:Array<String> = ['Note Colors', 'Controls', 'Adjust Delay and Combo', 'Graphics', 'Visuals and UI', 'Gameplay'];
+	public var options:Array<Array<String>> = [
+		['Note Colors'], 
+		['Controls'], 
+		['Adjust Delay and Combo'], 
+		['Graphics'], 
+		['Visuals and UI'], 
+		['Gameplay']
+	];
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
+	
+	public static var instance:OptionsState;
+	
+	public static var optionInstance:BaseOptionsMenu;
 
-	function openSelectedSubstate(label:String) {
+	function openSelectedSubstate(label:String, ?stateName:String) {
 		switch(label) {
 			case 'Note Colors':
 				openSubState(new options.NotesSubState());
@@ -48,6 +59,8 @@ class OptionsState extends MusicBeatState
 				openSubState(new options.GameplaySettingsSubState());
 			case 'Adjust Delay and Combo':
 				LoadingState.loadAndSwitchState(new options.NoteOffsetState());
+			default: //its probably a custom state
+				openSubState(new options.CustomLuaState(stateName));
 		}
 	}
 
@@ -58,6 +71,11 @@ class OptionsState extends MusicBeatState
 		#if desktop
 		DiscordClient.changePresence("Options Menu", null);
 		#end
+		
+		instance = this;
+		FunkinLua.curInstance = this;
+		CoolUtil.curLuaState = 'optionsstate';
+		initLua(false);
 
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = 0xFFea71fd;
@@ -69,13 +87,15 @@ class OptionsState extends MusicBeatState
 
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
-
-		for (i in 0...options.length)
+		
+		var i:Int = 0;
+		for (option in options)
 		{
-			var optionText:Alphabet = new Alphabet(0, 0, options[i], true);
+			var optionText:Alphabet = new Alphabet(0, 0, option[0], true);
 			optionText.screenCenter();
 			optionText.y += (100 * (i - (options.length / 2))) + 50;
 			grpOptions.add(optionText);
+			i++;
 		}
 
 		selectorLeft = new Alphabet(0, 0, '>', true);
@@ -87,14 +107,20 @@ class OptionsState extends MusicBeatState
 		ClientPrefs.saveSettings();
 
 		super.create();
+		
+		callOnLuas('onCreatePost', []);
+		add(luaDebugGroup);
 	}
 
 	override function closeSubState() {
+		CoolUtil.inOptions = false;
+		CoolUtil.inCustomState = false;
 		super.closeSubState();
 		ClientPrefs.saveSettings();
 	}
 
 	override function update(elapsed:Float) {
+		callOnLuas('onUpdate', []);
 		super.update(elapsed);
 
 		if (controls.UI_UP_P) {
@@ -110,8 +136,9 @@ class OptionsState extends MusicBeatState
 		}
 
 		if (controls.ACCEPT) {
-			openSelectedSubstate(options[curSelected]);
+			openSelectedSubstate(options[curSelected][0], options[curSelected][1]);
 		}
+		callOnLuas('onUpdatePost', []);
 	}
 	
 	function changeSelection(change:Int = 0) {

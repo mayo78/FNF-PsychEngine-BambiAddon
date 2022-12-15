@@ -66,4 +66,7 @@ class MusicBeatSubstate extends FlxSubState
 	{
 		//do literally nothing dumbass
 	}
+	
+	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null):Dynamic
+		return FunkinLua.curInstance.callOnLuas(event, args, ignoreStops, exclusions);
 }
