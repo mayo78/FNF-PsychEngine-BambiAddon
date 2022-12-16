@@ -46,7 +46,7 @@ class FreeplayState extends MusicBeatState
 
 	private var iconArray:Array<HealthIcon> = [];
 
-	public var bg:FlxSprite;
+	public var bg:MenuBG;
 	public var intendedColor:Int;
 	public var colorTween:FlxTween;
 	
@@ -109,7 +109,7 @@ class FreeplayState extends MusicBeatState
 			}
 		}*/
 
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg = new MenuBG();
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
 		bg.screenCenter();

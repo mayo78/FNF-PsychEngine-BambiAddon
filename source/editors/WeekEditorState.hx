@@ -588,14 +588,14 @@ class WeekEditorFreeplayState extends MusicBeatState
 		if(weekFile != null) this.weekFile = weekFile;
 	}
 
-	var bg:FlxSprite;
+	var bg:MenuBG;
 	private var grpSongs:FlxTypedGroup<Alphabet>;
 	private var iconArray:Array<HealthIcon> = [];
 
 	var curSelected = 0;
 
 	override function create() {
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg = new MenuBG();
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 
 		bg.color = FlxColor.WHITE;

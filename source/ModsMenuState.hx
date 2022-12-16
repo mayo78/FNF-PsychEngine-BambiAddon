@@ -37,7 +37,7 @@ class ModsMenuState extends MusicBeatState
 {
 	var mods:Array<ModMetadata> = [];
 	static var changedAThing = false;
-	var bg:FlxSprite;
+	var bg:MenuBG;
 	var intendedColor:Int;
 	var colorTween:FlxTween;
 
@@ -75,7 +75,7 @@ class ModsMenuState extends MusicBeatState
 		DiscordClient.changePresence("In the Menus", null);
 		#end
 
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg = new MenuBG();
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
 		bg.screenCenter();

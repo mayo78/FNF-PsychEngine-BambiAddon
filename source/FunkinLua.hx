@@ -232,6 +232,8 @@ class FunkinLua {
 		#else
 		set('buildTarget', 'unknown');
 		#end
+		
+		set('curState', CoolUtil.curLuaState);
 
 		// custom substate
 		addCallback("openCustomSubstate", function(name:String, pauseGame:Bool = false) {
@@ -1837,6 +1839,11 @@ class FunkinLua {
 					//trace('added a thing: ' + tag);
 				}
 			}
+			if(FunkinLua.curInstance.variables.exists(tag) && Std.isOfType(FunkinLua.curInstance.variables.get(tag), MenuBG))
+			{
+				var meThing:MenuBG = FunkinLua.curInstance.variables.get(tag);
+				FunkinLua.curInstance.add(meThing);
+			}
 		});
 		addCallback('insertLuaSprite', function(tag:String, position:Int) {
 			if(FunkinLua.curInstance.modchartSprites.exists(tag))
@@ -2761,6 +2768,27 @@ class FunkinLua {
 			return YEAH;
 		});
 		
+		addCallback('getClientPref', function(name:String) {
+			var YEAH:Dynamic = Reflect.getProperty(ClientPrefs, name);
+			if(YEAH == null)
+				YEAH = ClientPrefs.luaPrefs.get(name);
+			if(YEAH == null)
+			{
+				Lua.pushnil(lua);
+				return null;
+			}
+			return YEAH;
+		});
+		
+		//makes a menubg and disguses it as a modchartSprite
+		addCallback('makeMenuBG', function(tag:String, x:Float, y:Float, ?color:Int, ?image:String) {
+			var bg:MenuBG = new MenuBG(x, y, color, image);
+			FunkinLua.curInstance.variables.set(tag, bg);
+		});
+		addCallback('setMenuBgs', function(newBgs:Array<Array<Dynamic>>) {
+			MenuBG.bgs = newBgs;
+		});
+		
 		addCallback('switchState', function(name:String) {
 			switch(name.toLowerCase().trim())
 			{
@@ -2899,13 +2927,17 @@ class FunkinLua {
 						FreeplayState.substateInstance.getOptionByName(name).setValue(value);
 					}
 				});
-			case 'optionstate':
-				addCallback('addState', function(name:String, stateName:String) {
-					options.OptionsState.instance.options.push([name, stateName]);
+			case 'optionsstate':
+				addCallback('addState', function(name:String) {
+					trace('adding state', name);
+					options.OptionsState.instance.options.push(name);
 				});
 				addCallback('addOption', function(optionsStuff:options.Option.OptionsData) {
 					if(CoolUtil.inOptions)
+					{
+						trace('adding option', optionsStuff);
 						options.OptionsState.optionInstance.addOptionByData(optionsStuff);
+					}
 				});
 		}
 		
@@ -2913,7 +2945,7 @@ class FunkinLua {
 		{
 			//maybe add stuff here??
 		}
-
+		
 		call('onCreate', []);
 		#end
 	}
@@ -3043,7 +3075,7 @@ class FunkinLua {
 			return true;
 		}
 
-		var foldersToCheck:Array<String> = [Paths.mods('shaders/')];
+		var foldersToCheck:Array<String> = [Paths.mods('shaders/'), Paths.getPreloadPath('shaders/')];
 		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
 			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/shaders/'));
 
@@ -3263,6 +3295,13 @@ class FunkinLua {
 			case 'camother' | 'other': return PlayState.instance.camOther;
 		}
 		return PlayState.instance.camGame;
+	}
+	function cameraToString(cam:String):String { //formats camera to work with the filter function
+		switch(cam.toLowerCase()) {
+			case 'camhud' | 'hud': return 'camHUD';
+			case 'camother' | 'other': return 'camOther';
+		}
+		return 'camGame';
 	}
 
 	public function luaTrace(text:String, ignoreCheck:Bool = false, deprecated:Bool = false, color:FlxColor = FlxColor.WHITE) {

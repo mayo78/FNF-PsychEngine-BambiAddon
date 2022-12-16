@@ -4,13 +4,12 @@ package options;
 class CustomLuaState extends BaseOptionsMenu
 {
   public static var instance:CustomLuaState;
-  public static var curState:String = '';
-  public function new(?state:String)
+  public function new(?title:String = 'Custom Lua Options')
   {
-    curState = state;
     instance = this;
 		OptionsState.optionInstance = this;
 		CoolUtil.inOptions = true;
+    this.title = title;
     super();
     callOnLuas('onCreatePost', []);
   }

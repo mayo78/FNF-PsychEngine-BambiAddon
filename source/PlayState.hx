@@ -1324,9 +1324,10 @@ class PlayState extends MusicBeatState
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
-		
 
 		super.create();
+		
+		callOnLuas('onCreatePost', []);
 
 		cacheCountdown();
 		cachePopUpScore();
@@ -5129,5 +5130,5 @@ class PlayState extends MusicBeatState
 	#end
 
 	var curLight:Int = -1;
-	var curLightEvent:Int = -1;	
+	var curLightEvent:Int = -1;
 }

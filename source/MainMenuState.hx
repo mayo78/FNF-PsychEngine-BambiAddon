@@ -41,13 +41,12 @@ class MainMenuState extends MusicBeatState
 		#if !switch 'donate', #end
 		'options'
 	];
-
-	var magenta:FlxSprite;
+	
 	var camFollow:FlxObject;
 	var camFollowPos:FlxObject;
 	var debugKeys:Array<FlxKey>;
 	
-	public var bg:FlxSprite;
+	public var bg:MenuBG;
 	
 	public static var instance:MainMenuState;
 
@@ -87,7 +86,7 @@ class MainMenuState extends MusicBeatState
 			//gsdfdfg
 
 		var yScroll:Float = Math.max(0.25 - (0.05 * (optionShit.length - 4)), 0.1);
-		bg = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
+		bg = new MenuBG(-80, 0, MenuBG.MAIN_COLOR);
 		bg.scrollFactor.set(0, yScroll);
 		bg.setGraphicSize(Std.int(bg.width * 1.175));
 		bg.updateHitbox();
@@ -99,16 +98,6 @@ class MainMenuState extends MusicBeatState
 		camFollowPos = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
 		add(camFollowPos);
-
-		magenta = new FlxSprite(-80).loadGraphic(Paths.image('menuDesat'));
-		magenta.scrollFactor.set(0, yScroll);
-		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
-		magenta.updateHitbox();
-		magenta.screenCenter();
-		magenta.visible = false;
-		magenta.antialiasing = ClientPrefs.globalAntialiasing;
-		magenta.color = 0xFFfd719b;
-		add(magenta);
 		
 		// magenta.scrollFactor.set();
 
@@ -258,7 +247,12 @@ class MainMenuState extends MusicBeatState
 			selectedSomethin = true;
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 
-			if(ClientPrefs.flashing) FlxFlicker.flicker(magenta, 1.1, 0.15, false);
+			if(ClientPrefs.flashing) FlxFlicker.flicker(bg, 1.1, 0.15, true, true, null, function(flick:FlxFlicker) {
+				trace('FLICKERING');
+				var on:Bool = bg.color != MenuBG.SELECTED_COLOR;
+				bg.color = on ? MenuBG.SELECTED_COLOR : MenuBG.MAIN_COLOR;
+				bg.visible = true;
+			});
 
 			menuItems.forEach(function(spr:FlxSprite)
 			{

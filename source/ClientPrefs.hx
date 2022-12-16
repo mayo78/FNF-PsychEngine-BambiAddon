@@ -132,6 +132,8 @@ class ClientPrefs {
 		FlxG.save.data.pauseMusic = pauseMusic;
 		FlxG.save.data.checkForUpdates = checkForUpdates;
 		FlxG.save.data.comboStacking = comboStacking;
+		
+		FlxG.save.data.luaPrefs = luaPrefs;
 	
 		FlxG.save.flush();
 
@@ -268,6 +270,8 @@ class ClientPrefs {
 		}
 		if (FlxG.save.data.comboStacking != null)
 			comboStacking = FlxG.save.data.comboStacking;
+		if(FlxG.save.data.luaPrefs != null)
+			luaPrefs = FlxG.save.data.luaPrefs;
 
 		var save:FlxSave = new FlxSave();
 		save.bind('controls_v2' #if (flixel < "5.0.0"), 'ninjamuffin99' #end);

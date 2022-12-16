@@ -46,18 +46,17 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 	public function new()
 	{	
-		callOnLuas('onOptionsAdded', []);
 		super();
 
 		if(title == null) title = 'Options';
 		if(rpcTitle == null) rpcTitle = 'Options Menu';
+		callOnLuas('onOptionsAdded', [title]);
 		
 		#if desktop
 		DiscordClient.changePresence(rpcTitle, null);
 		#end
 		
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFFea71fd;
+		var bg:MenuBG = new MenuBG(0, 0, 0xFFea71fd);
 		bg.screenCenter();
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
@@ -87,7 +86,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		descText.scrollFactor.set();
 		descText.borderSize = 2.4;
 		add(descText);
-
+		
 		for (i in 0...optionsArray.length)
 		{
 			var optionText:Alphabet = new Alphabet(290, 260, optionsArray[i].name, false);
@@ -308,6 +307,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if (curSelected >= optionsArray.length)
 			curSelected = 0;
 
+		trace(optionsArray);
 		descText.text = optionsArray[curSelected].description;
 		descText.screenCenter(Y);
 		descText.y += 270;

@@ -76,8 +76,6 @@ class MusicBeatState extends FlxUIState
 			openSubState(new CustomFadeTransition(0.7, true));
 		}
 		FlxTransitionableState.skipNextTransOut = false;
-		
-		callOnLuas('onCreatePost', []);
 	}
 
 	override function update(elapsed:Float)
@@ -219,7 +217,7 @@ class MusicBeatState extends FlxUIState
 		return val == null ? 4 : val;
 	}
 	
-	public function initLua(?includeDebugGroup:Bool = true)
+	public function initLua(?includeDebugGroup:Bool = true, ?pack:String = '')
 	{
 		trace('initing lua :) curstate', CoolUtil.curLuaState);
 		#if LUA_ALLOWED
@@ -228,7 +226,7 @@ class MusicBeatState extends FlxUIState
 			add(luaDebugGroup);
 
 		// STATE SPECIFIC SCRIPTS
-		var idiotState:String =  CoolUtil.curLuaState + '/';
+		var idiotState:String =  pack + CoolUtil.curLuaState + '/';
 		var filesPushed:Array<String> = [];
 		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/'+ idiotState)];
 
@@ -269,7 +267,7 @@ class MusicBeatState extends FlxUIState
 				}
 			}
 		}
-		
+		setOnLuas('curLuaStatePrefix', pack);
 		callOnLuas('onInitLua', []); //maybe???
 		#end
 	}

@@ -29,13 +29,13 @@ using StringTools;
 
 class OptionsState extends MusicBeatState
 {
-	public var options:Array<Array<String>> = [
-		['Note Colors'], 
-		['Controls'], 
-		['Adjust Delay and Combo'], 
-		['Graphics'], 
-		['Visuals and UI'], 
-		['Gameplay']
+	public var options:Array<String> = [
+		'Note Colors', 
+		'Controls', 
+		'Adjust Delay and Combo', 
+		'Graphics', 
+		'Visuals and UI', 
+		'Gameplay'
 	];
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private static var curSelected:Int = 0;
@@ -60,7 +60,7 @@ class OptionsState extends MusicBeatState
 			case 'Adjust Delay and Combo':
 				LoadingState.loadAndSwitchState(new options.NoteOffsetState());
 			default: //its probably a custom state
-				openSubState(new options.CustomLuaState(stateName));
+				openSubState(new options.CustomLuaState(label));
 		}
 	}
 
@@ -77,8 +77,7 @@ class OptionsState extends MusicBeatState
 		CoolUtil.curLuaState = 'optionsstate';
 		initLua(false);
 
-		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFFea71fd;
+		var bg:MenuBG = new MenuBG(0, 0, 0xFFea71fd);
 		bg.updateHitbox();
 
 		bg.screenCenter();
@@ -91,7 +90,8 @@ class OptionsState extends MusicBeatState
 		var i:Int = 0;
 		for (option in options)
 		{
-			var optionText:Alphabet = new Alphabet(0, 0, option[0], true);
+			trace('adding option:', option);
+			var optionText:Alphabet = new Alphabet(0, 0, option, true);
 			optionText.screenCenter();
 			optionText.y += (100 * (i - (options.length / 2))) + 50;
 			grpOptions.add(optionText);
@@ -136,7 +136,7 @@ class OptionsState extends MusicBeatState
 		}
 
 		if (controls.ACCEPT) {
-			openSelectedSubstate(options[curSelected][0], options[curSelected][1]);
+			openSelectedSubstate(options[curSelected]);
 		}
 		callOnLuas('onUpdatePost', []);
 	}
