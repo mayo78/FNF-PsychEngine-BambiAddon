@@ -11,12 +11,5 @@ class CustomLuaState extends BaseOptionsMenu
 		CoolUtil.inOptions = true;
     this.title = title;
     super();
-    callOnLuas('onCreatePost', []);
-  }
-  override function update(elapsed:Float)
-  {
-    callOnLuas('onUpdate', [elapsed]);
-    super.update(elapsed);
-    callOnLuas('onUpdatePost', [elapsed]);
   }
 }

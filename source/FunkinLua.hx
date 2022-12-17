@@ -2885,19 +2885,8 @@ class FunkinLua {
 				addCallback('addMoreText', function(text:String, ?offset:Float) {
 					TitleState.instance.addMoreText(text, offset);
 				});
-				addCallback('deleteCoolText', function() {
-					TitleState.instance.deleteCoolText();
-				});
 			case 'mainmenustate':
-				addCallback('select', function(?what:Null<Int>)
-				{
-					if(what == null)
-						what = MainMenuState.curSelected;
-					else
-						MainMenuState.curSelected = what;
-					MainMenuState.instance.callOnLuas('onAcceptForced', []);
-					MainMenuState.instance.accept();
-				});
+				
 			case 'freeplaystate':
 				addCallback('getSongs', function() { //basically return an object that doesnt have the constructor so that it can be used in lua
 					var songs:Array<Dynamic> = [for(i in FreeplayState.instance.songs) {
@@ -3635,6 +3624,7 @@ class HScript
 			}
 			return false;
 		});
+		//copies all lua callbacks to hscript
 		for(callback in Lua_helper.callbacks.keys()) interp.variables.set(callback, Lua_helper.callbacks.get(callback));
 	}
 

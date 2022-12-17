@@ -26,6 +26,7 @@ using StringTools;
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '0.6.3'; //This is also used for Discord RPC
+	public static var bambiAddonVersion:String = '0.0.1';
 	public static var curSelected:Int = 0;
 
 	var menuItems:FlxTypedGroup<FlxSprite>;
@@ -140,6 +141,14 @@ class MainMenuState extends MusicBeatState
 		versionShit.scrollFactor.set();
 		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
+		var versionShit:FlxText = new FlxText(12, FlxG.height - 64, 0, "Bambi Addon v" + bambiAddonVersion, 12);
+		versionShit.scrollFactor.set();
+		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		add(versionShit);
+		var versionShit:FlxText = new FlxText(12, FlxG.height - 84, 0, LuaMain.data.modName + " v" + LuaMain.data.modVersion, 12);
+		versionShit.scrollFactor.set();
+		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		add(versionShit);
 
 		// NG.core.calls.event.logEvent('swag').send();
 
@@ -248,7 +257,6 @@ class MainMenuState extends MusicBeatState
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 
 			if(ClientPrefs.flashing) FlxFlicker.flicker(bg, 1.1, 0.15, true, true, null, function(flick:FlxFlicker) {
-				trace('FLICKERING');
 				var on:Bool = bg.color != MenuBG.SELECTED_COLOR;
 				bg.color = on ? MenuBG.SELECTED_COLOR : MenuBG.MAIN_COLOR;
 				bg.visible = true;

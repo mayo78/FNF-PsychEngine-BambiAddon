@@ -377,7 +377,7 @@ class FreeplayState extends MusicBeatState
 		{
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-			var ret:Dynamic = callOnLuas('onSongPicked', [songLowercase, curDifficulty, FlxG.keys.pressed.SHIFT], false); //you could do a character select state no way
+			var ret:Dynamic = callOnLuas('onSongPicked', [songLowercase, curDifficulty, FlxG.keys.pressed.SHIFT], false);
 			
 			if(ret != FunkinLua.Function_Stop)
 			{
@@ -418,7 +418,7 @@ class FreeplayState extends MusicBeatState
 		}
 		else if(controls.RESET)
 		{
-			callOnLuas('onSongResetScore', []);
+			callOnLuas('onSongResetScore', [songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter]);
 			persistentUpdate = false;
 			openSubState(new ResetScoreSubState(songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter));
 			FlxG.sound.play(Paths.sound('scrollMenu'));

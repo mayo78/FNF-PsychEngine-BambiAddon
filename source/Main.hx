@@ -86,10 +86,15 @@ class Main extends Sprite
 			game.width = Math.ceil(stageWidth / game.zoom);
 			game.height = Math.ceil(stageHeight / game.zoom);
 		}
-	
+		
+		
+		ConditionalManager.init();
+		LuaMain.init();
+		FlxG.save.bind('PsychEngineBambiAddonSaves', LuaMain.data.saveFolder1);
+		trace(FlxG.save.name, FlxG.save.path);
 		ClientPrefs.loadDefaultKeys();
 		addChild(new FlxGame(game.width, game.height, game.initialState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
-
+		
 		#if !mobile
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		addChild(fpsVar);
