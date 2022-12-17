@@ -2145,10 +2145,10 @@ class FunkinLua {
 				return false;
 
 				#else
-				if(FunkinLua.curInstance.endingSong) {
-					FunkinLua.curInstance.endSong();
+				if(PlayState.instance.endingSong) {
+					PlayState.instance.endSong();
 				} else {
-					FunkinLua.curInstance.startCountdown();
+					PlayState.instance.startCountdown();
 				}
 				return true;
 				#end
