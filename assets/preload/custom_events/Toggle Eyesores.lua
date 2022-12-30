@@ -1,7 +1,6 @@
 --i know this is like the bad way of applying cameras to shaders but who cares
 isEnabled = false
 function onCreatePost()
-  if buildTarget == 'windows' then
     setGlobalProperty('hasPulseShader', true)
   	initLuaShader 'PulseShader'
 
@@ -19,7 +18,6 @@ function onCreatePost()
   			game.camGame.setFilters([new ShaderFilter(game.getLuaObject('camShader').shader)]);
   		]])
   	end
-  end
 end
 function onEvent(n)
   if n == 'Toggle Eyesores' then
