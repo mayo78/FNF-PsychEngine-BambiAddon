@@ -2445,7 +2445,12 @@ class FunkinLua {
 			luaTrace('initSaveData: Save file already initialized: ' + name);
 		});
 		addCallback("flushSaveData", function(name:String) {
-			if(FunkinLua.curInstance.modchartSaves.exists(name))
+			if(name == null)
+			{
+				FlxG.save.flush();
+				return;
+			}
+			else if(FunkinLua.curInstance.modchartSaves.exists(name))
 			{
 				FunkinLua.curInstance.modchartSaves.get(name).flush();
 				return;
@@ -2788,26 +2793,55 @@ class FunkinLua {
 		addCallback('setMenuBgs', function(newBgs:Array<Array<Dynamic>>) {
 			MenuBG.bgs = newBgs;
 		});
+		addCallback('saveSet', function(variable:String, value:Dynamic) {
+			if(FlxG.save.data.luaSaves == null)
+				FlxG.save.data.luaSaves = new Map<String, Dynamic>();
+			FlxG.save.data.luaSaves.set(variable, value);
+		});
+		addCallback('saveGet', function(variable:String) {
+			var thing = null;
+			if(FlxG.save.data.luaSaves != null)
+				thing = FlxG.save.data.luaSaves.get(variable);
+			if(thing == null)
+				Lua.pushnil(lua);
+			return thing;
+		});
+		addCallback('setVar', function(variable:String, value:Dynamic) {
+			FunkinLua.curInstance.variables.set(variable, value);
+		});
+		addCallback('contains', function(t:Array<Dynamic>, what:Dynamic) {
+			return t.contains(what);
+		});
+		addCallback('indexOf', function(t:Array<Dynamic>, what:Dynamic) {
+			return t.indexOf(what);
+		});
 		
 		addCallback('switchState', function(name:String) {
-			switch(name.toLowerCase().trim())
-			{
-				case 'playstate':
-					MusicBeatState.switchState(new PlayState());
-				case 'mainmenustate':
-					MusicBeatState.switchState(new MainMenuState());
-				case 'titlestate':
-					MusicBeatState.switchState(new MainMenuState());
-				case 'freeplaystate':
-					MusicBeatState.switchState(new FreeplayState());
-				case 'mastereditormenu' | 'editors.mastereditormenu':
-					MusicBeatState.switchState(new editors.MasterEditorMenu());
-				case 'optionsstate' | 'options.optionsstate':
-					LoadingState.loadAndSwitchState(new options.OptionsState());
-				default:
-					CustomLuaState.curState = name;
-					MusicBeatState.switchState(new CustomLuaState());
+			try {
+				MusicBeatState.switchState(new Type.resolveClass(name));
 			}
+			catch(e:String){
+				CustomLuaState.curState = name;
+				MusicBeatState.switchState(new CustomLuaState());
+			}
+			// switch(name.toLowerCase().trim())
+			// {
+			// 	case 'playstate':
+			// 		MusicBeatState.switchState(new PlayState());
+			// 	case 'mainmenustate':
+			// 		MusicBeatState.switchState(new MainMenuState());
+			// 	case 'titlestate':
+			// 		MusicBeatState.switchState(new MainMenuState());
+			// 	case 'freeplaystate':
+			// 		MusicBeatState.switchState(new FreeplayState());
+			// 	case 'mastereditormenu' | 'editors.mastereditormenu':
+			// 		MusicBeatState.switchState(new editors.MasterEditorMenu());
+			// 	case 'optionsstate' | 'options.optionsstate':
+			// 		LoadingState.loadAndSwitchState(new options.OptionsState());
+			// 	default:
+			// 		CustomLuaState.curState = name;
+			// 		MusicBeatState.switchState(new CustomLuaState());
+			// }
 		});
 		
 		switch(CoolUtil.curLuaState) //state specific callbacks

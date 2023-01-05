@@ -3,10 +3,12 @@ package;
 
 typedef LuaData = {
   iconBop:Bool,
-  saveFolder1:String,
-  saveFolder2:String,
+  saveFile:String,
   modName:String,
-  modVersion:String
+  modVersion:String,
+  iconsPath:String,
+  windowTitle:String,
+  flashingStateText:String
 }
 class LuaMain
 {
@@ -16,5 +18,6 @@ class LuaMain
     var lua:FunkinLua = new FunkinLua(Paths.mods('main.lua'));
     data = lua.call('getMainStuff', []);
     lua.stop();
+    
   }
 }
