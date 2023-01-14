@@ -44,6 +44,7 @@ class MusicBeatState extends FlxUIState
 	//lua stuff
 	public static var instance:MusicBeatState;
 	public var luaArray:Array<FunkinLua> = [];
+	public var hscriptArray:Array<HScript> = [];
 	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
 	
 	#if (haxe >= "4.0.0")
@@ -63,7 +64,7 @@ class MusicBeatState extends FlxUIState
 	public var modchartTexts:Map<String, ModchartText> = new Map();
 	public var modchartSaves:Map<String, FlxSave> = new Map();
 	#end
-
+	
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;
 
@@ -228,30 +229,8 @@ class MusicBeatState extends FlxUIState
 		// STATE SPECIFIC SCRIPTS
 		var idiotState:String =  pack + CoolUtil.curLuaState + '/';
 		var filesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/'+ idiotState)];
-
-		if(ConditionalManager.MODS_ALLOWED)
-		{
-			foldersToCheck.insert(0, Paths.mods('scripts/'+ idiotState));
-			if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-				foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'+ idiotState));
-
-			for(mod in Paths.getGlobalMods())
-				foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'+ idiotState));
-		}
-		
-		// // ADD OTHER GLOBAL SCRIPTS
-		// var filesPushed:Array<String> = [];
-		// var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/')];
-		// 
-		// #if MODS_ALLOWED
-		// foldersToCheck.insert(0, Paths.mods('scripts/'));
-		// if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-		// 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
-		// 
-		// for(mod in Paths.getGlobalMods())
-		// 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
-		// #end
+		var hscriptFilesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/'+ idiotState), Paths.mods('scripts/'+ idiotState), Paths.mods('scripts/'), Paths.getPreloadPath('scripts/')];
 
 		for (folder in foldersToCheck)
 		{
@@ -264,6 +243,11 @@ class MusicBeatState extends FlxUIState
 						addNewLua(folder + file);
 						filesPushed.push(file);
 					}
+					else if(file.endsWith('.hx') && !hscriptFilesPushed.contains(file))
+					{
+						addNewHscript(folder + file);
+						hscriptFilesPushed.push(file);
+					}
 				}
 			}
 		}
@@ -274,6 +258,8 @@ class MusicBeatState extends FlxUIState
 	
 	public function addTextToDebug(text:String, color:FlxColor) {
 		#if LUA_ALLOWED
+		trace('stupdiidf ids', LuaMain.conditional('DEBUG'));
+		if(!LuaMain.conditional('DEBUG')) return;
 		luaDebugGroup.forEachAlive(function(spr:DebugLuaText) {
 			spr.y += 20;
 		});
@@ -294,6 +280,7 @@ class MusicBeatState extends FlxUIState
 		return null;
 	}
 	var luaDestroyed:Bool = false;
+	var hscriptDestroyed:Bool = false;
 	public function destroyLua():Void
 	{
 		if(!luaDestroyed)
@@ -309,6 +296,17 @@ class MusicBeatState extends FlxUIState
 			#end
 		}
 		luaDestroyed = true;
+	}
+	public function destroyHScript():Void
+	{
+		if(!hscriptDestroyed)
+		{
+			for(hscript in hscriptArray)
+			{
+				hscript.call('onDestroy');
+				hscript = null;
+			}
+		}
 	}
 	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null):Dynamic {
 		var returnVal:Dynamic = FunkinLua.Function_Continue;
@@ -330,6 +328,23 @@ class MusicBeatState extends FlxUIState
 			
 			script.call('onCall', [event, args]);
 		}
+		for(hscript in hscriptArray)
+		{
+			if(exclusions.contains(hscript.path))
+				continue;
+			
+			var ret:Dynamic = hscript.call(event, args);
+			if(ret == HScript.Function_StopHScript)
+				break;
+			
+			//no idea if this would be an issue with hscript but just incase
+			var bool:Bool = ret == FunkinLua.Function_Continue;
+			if(!bool && ret != 0) {
+				returnVal = cast ret;
+			}
+			
+			hscript.call('onCall', [event, args]);
+		}
 		#end
 		//trace(event, returnVal);
 		return returnVal;
@@ -341,6 +356,8 @@ class MusicBeatState extends FlxUIState
 			luaArray[i].set(variable, arg);
 		}
 		#end
+		for(hscript in hscriptArray)
+			hscript.set(variable, arg);
 	}
 	
 	public function addNewLua(path:String):FunkinLua
@@ -349,6 +366,14 @@ class MusicBeatState extends FlxUIState
 		luaArray.push(newLua);
 		newLua.call('onPush', []);
 		return newLua;
+	}
+	
+	public function addNewHscript(path:String):HScript
+	{
+		var newHScript:HScript = new HScript(path);
+		hscriptArray.push(newHScript);
+		newHScript.call('onPush');
+		return newHScript;
 	}
 	
 	public function setDebugTextOnTop():Void
@@ -360,6 +385,7 @@ class MusicBeatState extends FlxUIState
 	override function destroy():Void
 	{
 		destroyLua();
+		destroyHScript();
 		super.destroy();
 	}
 }

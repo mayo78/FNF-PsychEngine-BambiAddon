@@ -138,7 +138,7 @@ class ClientPrefs {
 		FlxG.save.flush();
 
 		var save:FlxSave = new FlxSave();
-		save.bind('controls_v2'); //screw you use flixel 5
+		save.bind('controls_v2', 'funkin/${LuaMain.data.saveFile}'); //screw you use flixel 5
 		save.data.customControls = keyBinds;
 		save.flush();
 		FlxG.log.add("Settings saved!");

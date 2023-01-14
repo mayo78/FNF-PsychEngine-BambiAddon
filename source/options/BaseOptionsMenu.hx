@@ -307,7 +307,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if (curSelected >= optionsArray.length)
 			curSelected = 0;
 
-		trace(optionsArray);
+		// trace(optionsArray);
 		descText.text = optionsArray[curSelected].description;
 		descText.screenCenter(Y);
 		descText.y += 270;

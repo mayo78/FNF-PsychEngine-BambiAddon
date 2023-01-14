@@ -90,7 +90,7 @@ class OptionsState extends MusicBeatState
 		var i:Int = 0;
 		for (option in options)
 		{
-			trace('adding option:', option);
+			// trace('adding option:', option);
 			var optionText:Alphabet = new Alphabet(0, 0, option, true);
 			optionText.screenCenter();
 			optionText.y += (100 * (i - (options.length / 2))) + 50;

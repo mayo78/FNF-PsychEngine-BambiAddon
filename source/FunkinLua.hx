@@ -891,13 +891,20 @@ class FunkinLua {
 			luaTrace("removeLuaScript: Script doesn't exist!", false, false, FlxColor.RED);
 		});
 
-		addCallback("runHaxeCode", function(codeToRun:String) {
+		addCallback("runHaxeCode", function(codeToRun:String, ?carryOverVars:Dynamic) {
 			var retVal:Dynamic = null;
+			var addedCode:String = '';
 
 			#if hscript
 			initHaxeModule();
 			try {
-				retVal = hscript.execute(codeToRun);
+				if(carryOverVars != null)
+				{
+					hscript.set('_carryOverVars', carryOverVars);
+					addedCode = [for(field in Reflect.fields(carryOverVars)) "var " + field + " = _carryOverVars." + field + ";"].join('\n');
+				}
+				retVal = hscript.execute(addedCode + codeToRun);
+				hscript.set('_carryOverVars', null);
 			}
 			catch (e:Dynamic) {
 				luaTrace(scriptName + ":" + lastCalledFunction + " - " + e, false, false, FlxColor.RED);
@@ -905,8 +912,7 @@ class FunkinLua {
 			#else
 			luaTrace("runHaxeCode: HScript isn't supported on this platform!", false, false, FlxColor.RED);
 			#end
-
-			if(retVal != null && !isOfTypes(retVal, [Bool, Int, Float, String, Array])) retVal = null;
+			
 			if(retVal == null) Lua.pushnil(lua);
 			return retVal;
 		});
@@ -919,7 +925,7 @@ class FunkinLua {
 				if(libPackage.length > 0)
 					str = libPackage + '.';
 
-				hscript.variables.set(libName, Type.resolveClass(str + libName));
+				hscript.set(libName, Type.resolveClass(str + libName));
 			}
 			catch (e:Dynamic) {
 				luaTrace(scriptName + ":" + lastCalledFunction + " - " + e, false, false, FlxColor.RED);
@@ -2817,30 +2823,39 @@ class FunkinLua {
 		});
 		
 		addCallback('switchState', function(name:String) {
-			try {
-				MusicBeatState.switchState(new Type.resolveClass(name));
+			switch(name.toLowerCase().trim())
+			{
+				case 'playstate':
+					MusicBeatState.switchState(new PlayState());
+				case 'mainmenustate':
+					MusicBeatState.switchState(new MainMenuState());
+				case 'titlestate':
+					MusicBeatState.switchState(new MainMenuState());
+				case 'freeplaystate':
+					MusicBeatState.switchState(new FreeplayState());
+				case 'mastereditormenu' | 'editors.mastereditormenu':
+					MusicBeatState.switchState(new editors.MasterEditorMenu());
+				case 'optionsstate' | 'options.optionsstate':
+					LoadingState.loadAndSwitchState(new options.OptionsState());
+				default:
+					CustomLuaState.curState = name;
+					MusicBeatState.switchState(new CustomLuaState());
 			}
-			catch(e:String){
-				CustomLuaState.curState = name;
-				MusicBeatState.switchState(new CustomLuaState());
-			}
-			// switch(name.toLowerCase().trim())
+			//ill get this working eventually, probably not lol
+			// if(FileSystem.exists(Paths.mods('scripts/${name}'))) //check for custom states
 			// {
-			// 	case 'playstate':
-			// 		MusicBeatState.switchState(new PlayState());
-			// 	case 'mainmenustate':
-			// 		MusicBeatState.switchState(new MainMenuState());
-			// 	case 'titlestate':
-			// 		MusicBeatState.switchState(new MainMenuState());
-			// 	case 'freeplaystate':
-			// 		MusicBeatState.switchState(new FreeplayState());
-			// 	case 'mastereditormenu' | 'editors.mastereditormenu':
-			// 		MusicBeatState.switchState(new editors.MasterEditorMenu());
-			// 	case 'optionsstate' | 'options.optionsstate':
-			// 		LoadingState.loadAndSwitchState(new options.OptionsState());
-			// 	default:
-			// 		CustomLuaState.curState = name;
-			// 		MusicBeatState.switchState(new CustomLuaState());
+			// 	CustomLuaState.curState = name;
+			// 	MusicBeatState.switchState(new CustomLuaState());
+			// }
+			// else
+			// {
+			// 	try{
+			// 		if(args == null)
+			// 			args = [];
+			// 		MusicBeatState.switchState(Type.createInstance(Type.resolveClass(name), args));
+			// 	}catch(e:Dynamic){
+			// 		luaTrace('Error switching state: ${e.toString()}', false, false, FlxColor.RED);
+			// 	}
 			// }
 		});
 		
@@ -3599,75 +3614,3 @@ class CustomSubstate extends MusicBeatSubstate
 		super.destroy();
 	}
 }
-
-#if hscript
-class HScript
-{
-	public static var parser:Parser = new Parser();
-	public var interp:Interp;
-
-	public var variables(get, never):Map<String, Dynamic>;
-
-	public function get_variables()
-	{
-		return interp.variables;
-	}
-
-	public function new(?luaInstance:FunkinLua)
-	{
-		interp = new Interp();
-		interp.variables.set('FlxG', FlxG);
-		interp.variables.set('Math', Math);
-		interp.variables.set('FlxSprite', FlxSprite);
-		interp.variables.set('FlxCamera', FlxCamera);
-		interp.variables.set('FlxTimer', FlxTimer);
-		interp.variables.set('FlxTween', FlxTween);
-		interp.variables.set('FlxEase', FlxEase);
-		interp.variables.set('PlayState', PlayState);
-		interp.variables.set('game', FunkinLua.curInstance);
-		interp.variables.set('Paths', Paths);
-		interp.variables.set('Conductor', Conductor);
-		interp.variables.set('ClientPrefs', ClientPrefs);
-		interp.variables.set('Character', Character);
-		interp.variables.set('Alphabet', Alphabet);
-		interp.variables.set('CustomSubstate', CustomSubstate);
-		#if (!flash && sys)
-		interp.variables.set('FlxRuntimeShader', FlxRuntimeShader);
-		#end
-		interp.variables.set('ShaderFilter', openfl.filters.ShaderFilter);
-		interp.variables.set('StringTools', StringTools);
-		interp.variables.set('FunkinLua', FunkinLua); //would be useful
-		interp.variables.set('luaInstance', luaInstance);
-
-		interp.variables.set('setVar', function(name:String, value:Dynamic)
-		{
-			FunkinLua.curInstance.variables.set(name, value);
-		});
-		interp.variables.set('getVar', function(name:String)
-		{
-			var result:Dynamic = null;
-			if(FunkinLua.curInstance.variables.exists(name)) result = FunkinLua.curInstance.variables.get(name);
-			return result;
-		});
-		interp.variables.set('removeVar', function(name:String)
-		{
-			if(FunkinLua.curInstance.variables.exists(name))
-			{
-				FunkinLua.curInstance.variables.remove(name);
-				return true;
-			}
-			return false;
-		});
-		//copies all lua callbacks to hscript
-		for(callback in Lua_helper.callbacks.keys()) interp.variables.set(callback, Lua_helper.callbacks.get(callback));
-	}
-
-	public function execute(codeToRun:String):Dynamic
-	{
-		@:privateAccess
-		HScript.parser.line = 1;
-		HScript.parser.allowTypes = true;
-		return interp.execute(HScript.parser.parseString(codeToRun));
-	}
-}
-#end

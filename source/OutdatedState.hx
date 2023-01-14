@@ -11,6 +11,8 @@ import flixel.addons.transition.FlxTransitionableState;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxTimer;
 
+using StringTools;
+
 class OutdatedState extends MusicBeatState
 {
 	public static var leftState:Bool = false;
@@ -24,12 +26,7 @@ class OutdatedState extends MusicBeatState
 		add(bg);
 
 		warnText = new FlxText(0, 0, FlxG.width,
-			"Sup bro, looks like you're running an   \n
-			outdated version of Psych Engine (" + MainMenuState.psychEngineVersion + "),\n
-			please update to " + TitleState.updateVersion + "!\n
-			Press ESCAPE to proceed anyway.\n
-			\n
-			Thank you for using the Engine!",
+			LuaMain.data.outdatedText.replace('_CURRENT_VERSION', TitleState.updateVersion).replace('_VERSION', LuaMain.data.modVersion),
 			32);
 		warnText.setFormat("VCR OSD Mono", 32, FlxColor.WHITE, CENTER);
 		warnText.screenCenter(Y);
@@ -41,7 +38,7 @@ class OutdatedState extends MusicBeatState
 		if(!leftState) {
 			if (controls.ACCEPT) {
 				leftState = true;
-				CoolUtil.browserLoad("https://github.com/ShadowMario/FNF-PsychEngine/releases");
+				CoolUtil.browserLoad(LuaMain.data.updateLink);
 			}
 			else if(controls.BACK) {
 				leftState = true;

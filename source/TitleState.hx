@@ -120,13 +120,12 @@ class TitleState extends MusicBeatState
 		}
 		#end*/
 
-		FlxG.game.focusLostFramerate = 60;
+		
+    FlxG.game.focusLostFramerate = 60;
 		FlxG.sound.muteKeys = muteKeys;
 		FlxG.sound.volumeDownKeys = volumeDownKeys;
 		FlxG.sound.volumeUpKeys = volumeUpKeys;
 		FlxG.keys.preventDefaultKeys = [TAB];
-
-		PlayerSettings.init();
 
 		curWacky = FlxG.random.getObject(getIntroTextShit());
 
@@ -137,17 +136,17 @@ class TitleState extends MusicBeatState
 
 		// FlxG.save.bind('funkin' #if (flixel < "5.0.0"), 'ninjamuffin99' #end);
 
-		ClientPrefs.loadPrefs();
+		// ClientPrefs.loadPrefs();
 
-		if(ConditionalManager.CHECK_FOR_UPDATES) {
+		if(LuaMain.conditional('CHECK_FOR_UPDATES')) {
 			if(ClientPrefs.checkForUpdates && !closedState) {
 				trace('checking for update');
-				var http = new haxe.Http("https://raw.githubusercontent.com/mayo78/FNF-PsychEngine-BambiAddon/main/gitVersion.txt");
+				var http = new haxe.Http(LuaMain.data.updateTxtLink);
 
 				http.onData = function (data:String)
 				{
 					updateVersion = data.split('\n')[0].trim();
-					var curVersion:String = MainMenuState.psychEngineVersion.trim();
+					var curVersion:String = LuaMain.data.modVersion;
 					trace('version online: ' + updateVersion + ', your version: ' + curVersion);
 					if(updateVersion != curVersion) {
 						trace('versions arent matching!');
@@ -194,11 +193,7 @@ class TitleState extends MusicBeatState
 
 		if(!initialized)
 		{
-			if(FlxG.save.data != null && FlxG.save.data.fullscreen)
-			{
-				FlxG.fullscreen = FlxG.save.data.fullscreen;
-				//trace('LOADED FULLSCREEN SETTING!!');
-			}
+			
 			persistentUpdate = true;
 			persistentDraw = true;
 		}
@@ -214,11 +209,11 @@ class TitleState extends MusicBeatState
 		#elseif CHARTING
 		MusicBeatState.switchState(new ChartingState());
 		#else
-		if(FlxG.save.data.flashing == null && !FlashingState.leftState) {
-			FlxTransitionableState.skipNextTransIn = true;
-			FlxTransitionableState.skipNextTransOut = true;
-			MusicBeatState.switchState(new FlashingState());
-		} else {
+		// if(FlxG.save.data.flashing == null && !FlashingState.leftState) {
+		// 	FlxTransitionableState.skipNextTransIn = true;
+		// 	FlxTransitionableState.skipNextTransOut = true;
+		// 	MusicBeatState.switchState(new FlashingState());
+		// } else {
 			if (initialized)
 				startIntro();
 			else
@@ -228,7 +223,7 @@ class TitleState extends MusicBeatState
 					startIntro();
 				});
 			}
-		}
+		// }
 		#end
 		
 		
@@ -521,9 +516,9 @@ class TitleState extends MusicBeatState
 					if (mustUpdate) {
 						MusicBeatState.switchState(new OutdatedState());
 					} else {
-						trace('gonna open :)');
+						// trace('gonna open :)');
 						MusicBeatState.switchState(new MainMenuState());
-						trace('YAY BFDIA 6!');
+						// trace('YAY BFDIA 6!');
 					}
 					closedState = true;
 				});
