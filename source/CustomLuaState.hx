@@ -9,12 +9,13 @@ class CustomLuaState extends MusicBeatState
   override function create()
   {
     instance = this;
-    FunkinLua.curInstance = this;
-    CoolUtil.curLuaState = CustomLuaState.curState;
+    //FunkinLua.curInstance = this;
     CoolUtil.inCustomState = true;
-    initLua();
+    initLua(false);
+    CoolUtil.curLuaState = CustomLuaState.curState;
     super.create();
     callOnLuas('onCreatePost', []);
+    add(luaDebugGroup);
   }
   override function destroy()
   {

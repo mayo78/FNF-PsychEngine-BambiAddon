@@ -42,7 +42,7 @@ class MusicBeatState extends FlxUIState
 	public static var camBeat:FlxCamera;
 	
 	//lua stuff
-	public static var instance:MusicBeatState;
+	public static var instance:Dynamic;
 	public var luaArray:Array<FunkinLua> = [];
 	public var hscriptArray:Array<HScript> = [];
 	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
@@ -218,19 +218,21 @@ class MusicBeatState extends FlxUIState
 		return val == null ? 4 : val;
 	}
 	
-	public function initLua(?includeDebugGroup:Bool = true, ?pack:String = '')
+	public function initLua(?includeDebugGroup:Bool = true)
 	{
-		trace('initing lua :) curstate', CoolUtil.curLuaState);
+		instance = this;
+		FunkinLua.curInstance = this;
+		var idiotState:String = Type.getClassName(Type.getClass(this)).toLowerCase();
+		trace('initing lua :) curstate', idiotState);
 		#if LUA_ALLOWED
 		luaDebugGroup = new FlxTypedGroup<DebugLuaText>();
 		if(includeDebugGroup)
 			add(luaDebugGroup);
 
 		// STATE SPECIFIC SCRIPTS
-		var idiotState:String =  pack + CoolUtil.curLuaState + '/';
 		var filesPushed:Array<String> = [];
 		var hscriptFilesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/'+ idiotState), Paths.mods('scripts/'+ idiotState), Paths.mods('scripts/'), Paths.getPreloadPath('scripts/')];
+		var foldersToCheck:Array<String> = [Paths.getPreloadPath('scripts/$idiotState/'), Paths.mods('scripts/$idiotState/'), Paths.mods('scripts/'), Paths.getPreloadPath('scripts/')];
 
 		for (folder in foldersToCheck)
 		{
@@ -240,6 +242,7 @@ class MusicBeatState extends FlxUIState
 				{
 					if(file.endsWith('.lua') && !filesPushed.contains(file))
 					{
+						trace(folder, file);
 						addNewLua(folder + file);
 						filesPushed.push(file);
 					}
@@ -251,14 +254,14 @@ class MusicBeatState extends FlxUIState
 				}
 			}
 		}
-		setOnLuas('curLuaStatePrefix', pack);
+		// setOnLuas('curLuaStatePrefix', pack);
 		callOnLuas('onInitLua', []); //maybe???
 		#end
 	}
 	
 	public function addTextToDebug(text:String, color:FlxColor) {
 		#if LUA_ALLOWED
-		trace('stupdiidf ids', LuaMain.conditional('DEBUG'));
+		// trace('stupdiidf ids', LuaMain.conditional('DEBUG'));
 		if(!LuaMain.conditional('DEBUG')) return;
 		luaDebugGroup.forEachAlive(function(spr:DebugLuaText) {
 			spr.y += 20;
@@ -327,6 +330,9 @@ class MusicBeatState extends FlxUIState
 			}
 			
 			script.call('onCall', [event, args]);
+			var ok:Array<Dynamic> = Reflect.copy(args);
+			ok.insert(0, event);
+			script.call('_event', ok);
 		}
 		for(hscript in hscriptArray)
 		{
@@ -348,6 +354,19 @@ class MusicBeatState extends FlxUIState
 		#end
 		//trace(event, returnVal);
 		return returnVal;
+	}
+	public var lastHScriptReturn:HScript;
+	public function callOnHscripts(func:String, args:Array<Dynamic>) { //returns haxe values instead of just function_stop and function_continue
+		var ret = null;
+		for(hscript in hscriptArray)
+		{
+			var coolRet = hscript.call(func, args);
+			if(coolRet != null){
+				ret = coolRet;
+				lastHScriptReturn = hscript;
+			}
+		}
+		return ret;
 	}
 
 	public function setOnLuas(variable:String, arg:Dynamic) {

@@ -84,20 +84,105 @@ class FunkinLua {
 		LuaL.openlibs(lua);
 		Lua.init_callbacks(lua);
 
-		//trace('Lua version: ' + Lua.version());
-		//trace("LuaJIT version: " + Lua.versionJIT());
+		//add events for libraries and also set other things up
+		addCallback('trace', function(what:String) {trace(what);});
+		LuaL.dostring(lua, "
+		-- [[LUA 5.3 FUNCTIONS]]
+		function table.find(table,v)
+			for i,v2 in next,table do
+				if v2 == v then
+					return i;
+				end
+			end
+		end
 
-		//LuaL.dostring(lua, CLENSE);
+		function table.clear(t)
+			while #t ~= 0 do 
+				rawset(t, #t, nil); 
+			end
+		end
+
+		function math.clamp(x,min,max)return math.max(min,math.min(x,max)); end
+
+		-- INITIAL FUNCTIONS
+		function table.copy(t,st,copyMeta,x)
+			if (copyMeta == nil) then copyMeta = true; end
+			x = x or 0;
+			getfenv().things = getfenv().things or {};
+			local things = getfenv().things;
+			if (things[t] ~= nil) then return things[t]; end
+
+			st = st or {};
+			
+			things[t] = st;
+			
+			for i,v in pairs(t) do
+				st[i] = type(v) == \"table\" and tableCopy(v,{},copyMeta,x + 1) or v;
+			end
+			if (x <= 0) then getfenv().things = {}; end
+			
+			if (copyMeta) then
+				local meta = getmetatable(t);
+				if (type(meta) == \"table\") then
+					setmetatable(st, meta);
+				end
+			end
+			
+			return st;
+		end
+		--i stole this from super :grin:
+		-- Simple endsWith and startsWith functions in pure lua. Using string.sub to allow things like \"gf-\" to work as expected
+		function string.endsWith(str,match) return (str:sub(-#match) == match) end
+		function string.startsWith(str,match) return (str:sub(0,#match) == match) end
+		-- Count a table that uses more than just numbers for indices
+		function table.count(tbl) 
+			local count = 0
+			for _,_ in pairs(tbl) do count = count + 1 end
+			return count
+		end
+		-- Interpolates 2 values
+		function math.lerp(a,b,x)
+			return a + (b - a) * x
+		end
+		-- Converts a hex string into a table
+		function hexToTbl(hex)
+			hex = tostring(hex):gsub('^0x','')
+			local ret = {}
+			for e in hex:gmatch('[A-z0-9][A-z0-9]') do
+				table.insert(ret,tonumber('0x' .. e))
+			end
+			return ret
+		end
+
+		_psych = {eventList = {}}; --make a psych table for psych things
+		function _event(event, ...) --events for libraries
+			if _psych.eventList[event] then
+				for i,event in pairs(_psych.eventList[event]) do
+					event(...);
+				end
+			end
+			if _psych.eventList.onEvent then
+				for i,event2 in pairs(_psych.eventList.onEvent) do
+					event2(event, {...});
+				end
+			end
+		end
+		function addEvent(event, callback)
+			if not _psych.eventList[event] then 
+				_psych.eventList[event] = {};
+			end
+			table.insert(_psych.eventList[event], callback);
+		end");
 		try{
+			Lua.getglobal(lua, "package");
+			Lua.pushstring(lua, Paths.getLuaPackagePath());
+			Lua.setfield(lua, -2, "path");
+			Lua.pop(lua, 1);
 			var result:Dynamic = LuaL.dofile(lua, script);
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
 				trace('Error on lua script! ' + resultStr);
-				#if windows
 				lime.app.Application.current.window.alert(resultStr, 'Error on lua script!');
-				#else
-				luaTrace('Error loading lua script: "$script"\n' + resultStr, true, false, FlxColor.RED);
-				#end
 				lua = null;
 				return;
 			}
@@ -158,6 +243,8 @@ class FunkinLua {
 					set('defaultOpponentStrumX' + i, 0);
 					set('defaultOpponentStrumY' + i, 0);
 				}
+				set('defaultStrumPos', [for(i in 0...4) 0]);
+				set('defaultStrumPosY', [for(i in 0...4) 0]);
 
 				// Default character positions woooo
 				set('defaultBoyfriendX', PlayState.instance.BF_X);
@@ -1088,17 +1175,66 @@ class FunkinLua {
 		});
 
 		// gay ass tweens
-		// addCallback('doTween', function(tag:String, vars:Dynamic, duration:Float, options:Dynamic, onComplete:Void->Void, onStart:Void->Void, onUpdate:Void->Void) {
-		// 	if(onComplete != null)
-		// 		options.onComplete = function(twn:FlxTween)
-		// 			onComplete();
-		// 	if(onStart != null)
-		// 		options.onStart = function(twn:FlxTween)
-		// 			onStart();
-		// 	if(onUpdate != null)
-		// 		options.onUpdate = function(twn:FlxTween)
-		// 			onUpdate();
-		// });
+		addCallback('doTween', function(tag:String, obj:String, vars:Dynamic, duration:Float, options:Dynamic) {
+			trace('hello!');
+			var ok:Dynamic = tweenShit(tag, obj);
+			FunkinLua.curInstance.modchartTweens.set(tag, FlxTween.tween(ok, vars, duration, (options != null) ? {
+				startDelay: Reflect.hasField(options, 'startDelay') ? options.startDelay : null,
+				ease: Reflect.hasField(options, 'ease') ? getFlxEaseByString(options.ease) : null,
+				onStart: function(twn:FlxTween) {call('_tweenStart', [tag]);},
+				onComplete: function(twn:FlxTween) {call('_tweenComplete', [tag]);},
+				onUpdate: function(twn:FlxTween) {call('_tweenUpdate', [tag, twn.percent]);}
+			} : null));
+		});
+		//add callback functionality
+		LuaL.dostring(lua, "
+		local _dt = doTween; --store the haxe function
+		_psych.tweens = {}; --make empty table
+		function doTween(tag, obj, vars, duration, options) --overwrite the function
+			if options then --store the options and callbacks as an index
+				_psych.tweens[tag] = options;
+			end
+			local copycat = table.copy(options); --copy the options table to remove functions
+			copycat.onStart = nil;
+			copycat.onComplete = nil;
+			copycat.onUpdate = nil;
+			_dt(tag, obj, vars, duration, copycat); --do tween
+		end
+		--self explanatory
+		function _tweenStart(tag)
+			if _psych.eventList.onTweenStart then
+				for i,event in pairs(_psych.eventList.onTweenStart) do
+					event(tag);
+				end
+			end
+			if _psych.tweens[tag] and _psych.tweens[tag].onStart then
+				_psych.tweens[tag].onStart();
+			end
+			onTweenStart(tag)
+		end
+		function _tweenComplete(tag)
+			if _psych.eventList.onTweenCompleted then
+				for i,event in pairs(_psych.eventList.onTweenCompleted) do
+					event(tag);
+				end
+			end
+			if _psych.tweens[tag] and _psych.tweens[tag].onComplete then
+				_psych.tweens[tag].onComplete();
+				_psych.tweens[tag] = nil;
+			end
+		end
+		function _tweenUpdate(tag, percent)
+			if _psych.eventList.onTweenUpdate then
+				for i,event in pairs(_psych.eventList.onTweenUpdate) do
+					event(tag, percent);
+				end
+			end
+			if _psych.tweens[tag] and _psych.tweens[tag].onUpdate then
+				_psych.tweens[tag].onUpdate(percent);
+			end
+			onTweenUpdated(tag, percent);
+		end
+		");
 		addCallback("doTweenX", function(tag:String, vars:String, value:Dynamic, duration:Float, ease:String) {
 			var penisExam:Dynamic = tweenShit(tag, vars);
 			if(penisExam != null) {
@@ -1256,9 +1392,28 @@ class FunkinLua {
 					FunkinLua.curInstance.modchartTimers.remove(tag);
 				}
 				FunkinLua.curInstance.callOnLuas('onTimerCompleted', [tag, tmr.loops, tmr.loopsLeft]);
-				//trace('Timer Completed: ' + tag);
+				call('_timerComplete', [tag, tmr.loops, tmr.loopsLeft]);
 			}, loops));
 		});
+		LuaL.dostring(lua, "
+		_psych.timers = {}; --make blank table
+		local _rt = runTimer; --store normal version
+		function runTimer(tag, time, loops, callback) --replace callback
+			if type(loops) == 'function' then callback = loops; loops = 1; end --stupid
+			_psych.timers[tag] = callback; --add the callback as an index in the timer table
+			_rt(tag, time or 1, loops or 1); --run the timer from the stored nromal version
+		end
+		function _timerComplete(tag, loops, loopsLeft) --seperate from onTimerCompleted, shouldn't be messed with!
+			if _psych.eventList.onTimerCompleted then --lib events
+				for i,event in pairs(_psych.eventList.onTimerCompleted) do
+					event(tag, loops, loopsleft);
+				end
+			end
+			if _psych.timers[tag] then --check if the tag exists as an index
+				_psych.timers[tag](loops, loopsLeft); --run the timer
+				_psych.timers[tag] = nil; --delete them!
+			end
+		end");
 		addCallback("cancelTimer", function(tag:String) {
 			cancelTimer(tag);
 		});
@@ -2757,7 +2912,8 @@ class FunkinLua {
 			var poop = Highscore.formatSong(name, difficultyNum);
 			PlayState.SONG = Song.loadFromJson(poop, name);
 			PlayState.storyDifficulty = difficultyNum;
-			PlayState.instance.persistentUpdate = false;
+			if(CoolUtil.curLuaState == 'playstate')
+				PlayState.instance.persistentUpdate = false;
 			LoadingState.loadAndSwitchState(new PlayState());
 
 			FlxG.sound.music.pause();
@@ -2830,7 +2986,7 @@ class FunkinLua {
 				case 'mainmenustate':
 					MusicBeatState.switchState(new MainMenuState());
 				case 'titlestate':
-					MusicBeatState.switchState(new MainMenuState());
+					MusicBeatState.switchState(new TitleState());
 				case 'freeplaystate':
 					MusicBeatState.switchState(new FreeplayState());
 				case 'mastereditormenu' | 'editors.mastereditormenu':
@@ -3525,10 +3681,21 @@ class FunkinLua {
 	{
 		return PlayState.instance.isDead ? GameOverSubstate.instance : PlayState.instance;
 	}
-	public function addCallback(name:String, func:Dynamic):Bool
+	public function addCallback(name:String, func:Dynamic)
 	{
 		// trace('adding callback', name, func, curLuaState);
-		return Lua_helper.add_callback(lua, name, func);
+		Lua_helper.add_callback(lua, name, func);
+		LuaL.dostring(lua, '
+		local _old = $name;
+		function $name(...)
+			if _psych.eventList.$name then
+				for i,event in pairs(_psych.eventList.$name) do
+					event(...)	
+				end
+			end
+			return _old(...)
+		end
+		');
 	}
 	//END OF FUNKINLUA
 }

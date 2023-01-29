@@ -68,8 +68,8 @@ class FreeplayState extends MusicBeatState
 		#end
 		
 		instance = this;
-		FunkinLua.curInstance = this;
-		CoolUtil.curLuaState = 'freeplaystate';
+		//FunkinLua.curInstance = this;
+		//CoolUtil.curLuaState = 'freeplaystate';
 		initLua(false);
 
 		for (i in 0...WeekData.weeksList.length) {

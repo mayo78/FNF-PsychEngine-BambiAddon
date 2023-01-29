@@ -81,8 +81,8 @@ class MainMenuState extends MusicBeatState
 		
 			//gsdfdfg
 		instance = this;
-		FunkinLua.curInstance = this;
-		CoolUtil.curLuaState = 'mainmenustate';
+		//FunkinLua.curInstance = this;
+		//CoolUtil.curLuaState = 'mainmenustate';
 		initLua(false);
 			//gsdfdfg
 

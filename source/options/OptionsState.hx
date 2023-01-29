@@ -73,8 +73,8 @@ class OptionsState extends MusicBeatState
 		#end
 		
 		instance = this;
-		FunkinLua.curInstance = this;
-		CoolUtil.curLuaState = 'optionsstate';
+		//FunkinLua.curInstance = this;
+		//CoolUtil.curLuaState = 'optionsstate';
 		initLua(false);
 
 		var bg:MenuBG = new MenuBG(0, 0, 0xFFea71fd);

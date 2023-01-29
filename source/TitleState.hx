@@ -94,8 +94,8 @@ class TitleState extends MusicBeatState
 		Paths.clearUnusedMemory();
 	
 		instance = this;
-		FunkinLua.curInstance = this;
-		CoolUtil.curLuaState = 'titlestate';
+		//FunkinLua.curInstance = this;
+		//CoolUtil.curLuaState = 'titlestate';
 
 		#if LUA_ALLOWED
 		Paths.pushGlobalMods();
