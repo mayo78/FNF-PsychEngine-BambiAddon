@@ -25,46 +25,49 @@ using StringTools;
 
 class MainMenuState extends MusicBeatState
 {
-	public static var psychEngineVersion:String = '0.6.3'; //This is also used for Discord RPC
+	public static var psychEngineVersion:String = '0.6.3'; // This is also used for Discord RPC
 	public static var bambiAddonVersion:String = '0.0.1';
 	public static var curSelected:Int = 0;
 
 	var menuItems:FlxTypedGroup<FlxSprite>;
 	private var camGame:FlxCamera;
 	private var camAchievement:FlxCamera;
-	
+
 	var optionShit:Array<String> = [
 		'story_mode',
 		'freeplay',
 		#if MODS_ALLOWED 'mods', #end
-		#if ACHIEVEMENTS_ALLOWED 'awards', #end
+		'awards',
 		'credits',
 		#if !switch 'donate', #end
 		'options'
 	];
-	
+
 	var camFollow:FlxObject;
 	var camFollowPos:FlxObject;
 	var debugKeys:Array<FlxKey>;
-	
+
 	public var bg:MenuBG;
-	
+
 	public static var instance:MainMenuState;
 
 	override function create()
 	{
-		//gsdfdfg
+		// gsdfdfg
 		#if MODS_ALLOWED
 		Paths.pushGlobalMods();
 		#end
 		WeekData.loadTheFirstEnabledMod();
+
+		if (!LuaMain.conditional('ACHIEVEMENTS'))
+			optionShit.remove('awards');
 
 		#if desktop
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
 		#end
 		debugKeys = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
-			//gsdfdfg
+		// gsdfdfg
 
 		camGame = new FlxCamera();
 		camAchievement = new FlxCamera();
@@ -78,13 +81,13 @@ class MainMenuState extends MusicBeatState
 		transOut = FlxTransitionableState.defaultTransOut;
 
 		persistentUpdate = persistentDraw = true;
-		
-			//gsdfdfg
+
+		// gsdfdfg
 		instance = this;
-		//FunkinLua.curInstance = this;
-		//CoolUtil.curLuaState = 'mainmenustate';
+		// FunkinLua.curInstance = this;
+		// CoolUtil.curLuaState = 'mainmenustate';
 		initLua(false);
-			//gsdfdfg
+		// gsdfdfg
 
 		var yScroll:Float = Math.max(0.25 - (0.05 * (optionShit.length - 4)), 0.1);
 		bg = new MenuBG(-80, 0, MenuBG.MAIN_COLOR);
@@ -99,7 +102,7 @@ class MainMenuState extends MusicBeatState
 		camFollowPos = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
 		add(camFollowPos);
-		
+
 		// magenta.scrollFactor.set();
 
 		menuItems = new FlxTypedGroup<FlxSprite>();
@@ -113,7 +116,7 @@ class MainMenuState extends MusicBeatState
 		for (i in 0...optionShit.length)
 		{
 			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
-			var menuItem:FlxSprite = new FlxSprite(0, (i * 140)  + offset);
+			var menuItem:FlxSprite = new FlxSprite(0, (i * 140) + offset);
 			menuItem.scale.x = scale;
 			menuItem.scale.y = scale;
 			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
@@ -124,10 +127,11 @@ class MainMenuState extends MusicBeatState
 			menuItem.screenCenter(X);
 			menuItems.add(menuItem);
 			var scr:Float = (optionShit.length - 4) * 0.135;
-			if(optionShit.length < 6) scr = 0;
+			if (optionShit.length < 6)
+				scr = 0;
 			menuItem.scrollFactor.set(0, scr);
 			menuItem.antialiasing = ClientPrefs.globalAntialiasing;
-			//menuItem.setGraphicSize(Std.int(menuItem.width * 0.58));
+			// menuItem.setGraphicSize(Std.int(menuItem.width * 0.58));
 			menuItem.updateHitbox();
 		}
 
@@ -154,33 +158,35 @@ class MainMenuState extends MusicBeatState
 
 		changeItem();
 
-		#if ACHIEVEMENTS_ALLOWED
-		Achievements.loadAchievements();
-		var leDate = Date.now();
-		if (leDate.getDay() == 5 && leDate.getHours() >= 18) {
-			var achieveID:Int = Achievements.getAchievementIndex('friday_night_play');
-			if(!Achievements.isAchievementUnlocked(Achievements.achievementsStuff[achieveID][2])) { //It's a friday night. WEEEEEEEEEEEEEEEEEE
-				Achievements.achievementsMap.set(Achievements.achievementsStuff[achieveID][2], true);
-				giveAchievement();
-				ClientPrefs.saveSettings();
+		if (LuaMain.conditional('ACHIEVEMENTS'))
+		{
+			Achievements.loadAchievements();
+			var leDate = Date.now();
+			if (leDate.getDay() == 5 && leDate.getHours() >= 18)
+			{
+				var achieveID:Int = Achievements.getAchievementIndex('friday_night_play');
+				if (!Achievements.isAchievementUnlocked(Achievements.achievementsStuff[achieveID][2]))
+				{ // It's a friday night. WEEEEEEEEEEEEEEEEEE
+					Achievements.achievementsMap.set(Achievements.achievementsStuff[achieveID][2], true);
+					giveAchievement();
+					ClientPrefs.saveSettings();
+				}
 			}
 		}
-		#end
-		
+
 		add(luaDebugGroup);
 
 		super.create();
 		callOnLuas('onCreatePost', []);
 	}
 
-	#if ACHIEVEMENTS_ALLOWED
 	// Unlocks "Freaky on a Friday Night" achievement
-	function giveAchievement() {
+	function giveAchievement()
+	{
 		add(new AchievementObject('friday_night_play', camAchievement));
 		FlxG.sound.play(Paths.sound('confirmMenu'), 0.7);
 		trace('Giving achievement "friday_night_play"');
 	}
-	#end
 
 	var selectedSomethin:Bool = false;
 
@@ -189,7 +195,8 @@ class MainMenuState extends MusicBeatState
 		if (FlxG.sound.music.volume < 0.8)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
-			if(FreeplayState.vocals != null) FreeplayState.vocals.volume += 0.5 * elapsed;
+			if (FreeplayState.vocals != null)
+				FreeplayState.vocals.volume += 0.5 * elapsed;
 		}
 
 		var lerpVal:Float = CoolUtil.boundTo(elapsed * 7.5, 0, 1);
@@ -212,12 +219,12 @@ class MainMenuState extends MusicBeatState
 			if (controls.BACK)
 			{
 				var ret:Dynamic = callOnLuas('onExit', [], false);
-				if(ret != FunkinLua.Function_Stop)
+				if (ret != FunkinLua.Function_Stop)
 				{
 					selectedSomethin = true;
 					FlxG.sound.play(Paths.sound('cancelMenu'));
 					var ret:Dynamic = callOnLuas('onExitPost', [], false);
-					if(ret != FunkinLua.Function_Stop)
+					if (ret != FunkinLua.Function_Stop)
 						MusicBeatState.switchState(new TitleState());
 				}
 			}
@@ -243,7 +250,7 @@ class MainMenuState extends MusicBeatState
 			spr.screenCenter(X);
 		});
 	}
-	
+
 	public function accept():Void
 	{
 		callOnLuas('onAccept', []);
@@ -256,11 +263,13 @@ class MainMenuState extends MusicBeatState
 			selectedSomethin = true;
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 
-			if(ClientPrefs.flashing) FlxFlicker.flicker(bg, 1.1, 0.15, true, true, null, function(flick:FlxFlicker) {
-				var on:Bool = bg.color != MenuBG.SELECTED_COLOR;
-				bg.color = on ? MenuBG.SELECTED_COLOR : MenuBG.MAIN_COLOR;
-				bg.visible = true;
-			});
+			if (ClientPrefs.flashing)
+				FlxFlicker.flicker(bg, 1.1, 0.15, true, true, null, function(flick:FlxFlicker)
+				{
+					var on:Bool = bg.color != MenuBG.SELECTED_COLOR;
+					bg.color = on ? MenuBG.SELECTED_COLOR : MenuBG.MAIN_COLOR;
+					bg.visible = true;
+				});
 
 			menuItems.forEach(function(spr:FlxSprite)
 			{
@@ -279,8 +288,8 @@ class MainMenuState extends MusicBeatState
 					FlxFlicker.flicker(spr, 1, 0.06, false, false, function(flick:FlxFlicker)
 					{
 						var daChoice:String = optionShit[curSelected];
-						var ret:Dynamic = callOnLuas('onSelect', [daChoice], false); //so you could make a freeplay select menu
-						if(ret != FunkinLua.Function_Stop)
+						var ret:Dynamic = callOnLuas('onSelect', [daChoice], false); // so you could make a freeplay select menu
+						if (ret != FunkinLua.Function_Stop)
 						{
 							switch (daChoice)
 							{
@@ -324,7 +333,8 @@ class MainMenuState extends MusicBeatState
 			{
 				spr.animation.play('selected');
 				var add:Float = 0;
-				if(menuItems.length > 4) {
+				if (menuItems.length > 4)
+				{
 					add = menuItems.length * 8;
 				}
 				camFollow.setPosition(spr.getGraphicMidpoint().x, spr.getGraphicMidpoint().y - add);
