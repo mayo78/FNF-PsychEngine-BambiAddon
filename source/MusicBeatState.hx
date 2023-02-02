@@ -35,7 +35,6 @@ class MusicBeatState extends FlxUIState
 
 	private var curDecStep:Float = 0;
 	private var curDecBeat:Float = 0;
-	private var controls(get, never):Controls;
 
 	public static var camBeat:FlxCamera;
 
@@ -47,7 +46,6 @@ class MusicBeatState extends FlxUIState
 
 	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
 
-	#if (haxe >= "4.0.0")
 	public var variables:Map<String, Dynamic> = new Map();
 	public var modchartTweens:Map<String, FlxTween> = new Map<String, FlxTween>();
 	public var modchartSprites:Map<String, ModchartSprite> = new Map<String, ModchartSprite>();
@@ -55,16 +53,8 @@ class MusicBeatState extends FlxUIState
 	public var modchartSounds:Map<String, FlxSound> = new Map<String, FlxSound>();
 	public var modchartTexts:Map<String, ModchartText> = new Map<String, ModchartText>();
 	public var modchartSaves:Map<String, FlxSave> = new Map<String, FlxSave>();
-	#else
-	public var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
-	public var modchartTweens:Map<String, FlxTween> = new Map();
-	public var modchartSprites:Map<String, ModchartSprite> = new Map();
-	public var modchartTimers:Map<String, FlxTimer> = new Map();
-	public var modchartSounds:Map<String, FlxSound> = new Map();
-	public var modchartTexts:Map<String, ModchartText> = new Map();
-	public var modchartSaves:Map<String, FlxSave> = new Map();
-	#end
 
+	private var controls(get, never):Controls;
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;
 
@@ -240,6 +230,7 @@ class MusicBeatState extends FlxUIState
 		instance = this;
 		FunkinLua.curInstance = this;
 		var idiotState:String = (nameOverride == null) ? Type.getClassName(Type.getClass(this)).toLowerCase() : nameOverride;
+		CoolUtil.curLuaState = idiotState;
 		trace('initing lua :) curstate', idiotState);
 		#if LUA_ALLOWED
 		luaDebugGroup = new FlxTypedGroup<DebugLuaText>();

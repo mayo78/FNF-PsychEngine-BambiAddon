@@ -166,8 +166,7 @@ class FreeplayState extends MusicBeatState
 			curSelected = 0;
 		if (songs[curSelected] == null)
 			curSelected = 0;
-		if (songs[curSelected] != null)
-			bg.color = songs[curSelected].color;
+		bg.color = songs[curSelected].color;
 		intendedColor = bg.color;
 
 		if (lastDifficultyName == '')

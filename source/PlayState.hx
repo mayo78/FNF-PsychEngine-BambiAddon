@@ -2862,7 +2862,9 @@ class PlayState extends MusicBeatState
 			persistentUpdate = false;
 			paused = true;
 			cancelMusicFadeTween();
-			MusicBeatState.switchState(new CharacterEditorState(SONG.player2));
+			var ret = callOnLuas('onExit', ['charactereditor']);
+			if(ret != FunkinLua.Function_Stop)
+				MusicBeatState.switchState(new CharacterEditorState(SONG.player2));
 		}
 
 		if (startedCountdown)
@@ -3173,7 +3175,9 @@ class PlayState extends MusicBeatState
 		persistentUpdate = false;
 		paused = true;
 		cancelMusicFadeTween();
-		MusicBeatState.switchState(new ChartingState());
+		var ret = callOnLuas('onExit', ['charting']);
+		if(ret != FunkinLua.Function_Stop)
+			MusicBeatState.switchState(new ChartingState());
 		chartingMode = true;
 
 		#if desktop
@@ -3893,7 +3897,9 @@ class PlayState extends MusicBeatState
 					{
 						CustomFadeTransition.nextCamera = null;
 					}
-					MusicBeatState.switchState(new StoryMenuState());
+					var ret = callOnLuas('onExit', ['story']);
+					if(ret != FunkinLua.Function_Stop)
+						MusicBeatState.switchState(new StoryMenuState());
 
 					// if ()
 					if (!ClientPrefs.getGameplaySetting('practice', false) && !ClientPrefs.getGameplaySetting('botplay', false))
@@ -3938,19 +3944,10 @@ class PlayState extends MusicBeatState
 					PlayState.SONG = Song.loadFromJson(PlayState.storyPlaylist[0] + difficulty, PlayState.storyPlaylist[0]);
 					FlxG.sound.music.stop();
 
-					if (winterHorrorlandNext)
-					{
-						new FlxTimer().start(1.5, function(tmr:FlxTimer)
-						{
-							cancelMusicFadeTween();
-							LoadingState.loadAndSwitchState(new PlayState());
-						});
-					}
-					else
-					{
-						cancelMusicFadeTween();
+					cancelMusicFadeTween();
+					var ret = callOnLuas('onExit', ['story']);
+					if(ret != FunkinLua.Function_Stop)
 						LoadingState.loadAndSwitchState(new PlayState());
-					}
 				}
 			}
 			else
@@ -3962,7 +3959,9 @@ class PlayState extends MusicBeatState
 				{
 					CustomFadeTransition.nextCamera = null;
 				}
-				MusicBeatState.switchState(new FreeplayState());
+				var ret = callOnLuas('onExit', ['freeplay']);
+				if(ret != FunkinLua.Function_Stop)
+					MusicBeatState.switchState(new FreeplayState());
 				if (musicWhenLeave)
 					FlxG.sound.playMusic(Paths.music('freakyMenu'));
 				changedDifficulty = false;
@@ -3971,7 +3970,6 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	#if ACHIEVEMENTS_ALLOWED
 	var achievementObj:AchievementObject = null;
 
 	function startAchievement(achieve:String)
@@ -3990,7 +3988,6 @@ class PlayState extends MusicBeatState
 			endSong();
 		}
 	}
-	#end
 
 	public function KillNotes()
 	{
@@ -5246,6 +5243,7 @@ class PlayState extends MusicBeatState
 	{
 		if (chartingMode)
 			return null;
+		if(!LuaMain.conditional('ACHIEVEMENTS')) return null;
 
 		var usedPractice:Bool = (ClientPrefs.getGameplaySetting('practice', false) || ClientPrefs.getGameplaySetting('botplay', false));
 		for (i in 0...achievesToCheck.length)

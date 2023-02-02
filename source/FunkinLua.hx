@@ -1067,7 +1067,8 @@ class FunkinLua
 				{
 					hscript.set('_carryOverVars', carryOverVars);
 					addedCode = [
-						for (field in Reflect.fields(carryOverVars)) "var " + field + " = _carryOverVars." + field + ";"
+						for (field in Reflect.fields(carryOverVars))
+							"var " + field + " = _carryOverVars." + field + ";"
 					].join('\n');
 				}
 				retVal = hscript.execute(addedCode + codeToRun);
@@ -1558,7 +1559,7 @@ class FunkinLua
 			cancelTween(tag);
 		});
 
-		addCallback("runTimer", function(tag:String, time:Float = 1, loops:Int = 1)
+		addCallback("timer", function(tag:String, time:Float = 1, loops:Int = 1)
 		{
 			cancelTimer(tag);
 			FunkinLua.curInstance.modchartTimers.set(tag, new FlxTimer().start(time, function(tmr:FlxTimer)
@@ -1573,19 +1574,17 @@ class FunkinLua
 		});
 		LuaL.dostring(lua, "
 		_psych.timers = {}; --make blank table
-		local _rt = runTimer; --store normal version
-		function runTimer(tag, time, loops, callback) --replace callback
-			if type(loops) == 'function' then callback = loops; loops = 1; end --stupid
+		local _rt = timer; --store normal version
+		function timer(tag, time, callback, loops) --replace callback
 			_psych.timers[tag] = callback; --add the callback as an index in the timer table
 			_rt(tag, time or 1, loops or 1); --run the timer from the stored nromal version
+			trace ('idiot, '..tag..', '..tostring(callback == _psych.timers[tag]))
+			trace 'starting timer'
 		end
 		function _timerComplete(tag, loops, loopsLeft) --seperate from onTimerCompleted, shouldn't be messed with!
-			if _psych.eventList.onTimerCompleted then --lib events
-				for i,event in pairs(_psych.eventList.onTimerCompleted) do
-					event(tag, loops, loopsleft);
-				end
-			end
+			trace ('idiot, '..tag..', '..tostring(_psych.timers[tag] == nil))
 			if _psych.timers[tag] then --check if the tag exists as an index
+				trace 'running function'
 				_psych.timers[tag](loops, loopsLeft); --run the timer
 				_psych.timers[tag] = nil; --delete them!
 			end
@@ -1627,65 +1626,6 @@ class FunkinLua
 				}
 		});*/
 
-		// stupid bietch ass functions
-		if (CoolUtil.curLuaState == 'playstate')
-		{
-			addCallback("addScore", function(value:Int = 0)
-			{
-				PlayState.instance.songScore += value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("addMisses", function(value:Int = 0)
-			{
-				PlayState.instance.songMisses += value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("addHits", function(value:Int = 0)
-			{
-				PlayState.instance.songHits += value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("setScore", function(value:Int = 0)
-			{
-				PlayState.instance.songScore = value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("setMisses", function(value:Int = 0)
-			{
-				PlayState.instance.songMisses = value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("setHits", function(value:Int = 0)
-			{
-				PlayState.instance.songHits = value;
-				PlayState.instance.RecalculateRating();
-			});
-			addCallback("getScore", function()
-			{
-				return PlayState.instance.songScore;
-			});
-			addCallback("getMisses", function()
-			{
-				return PlayState.instance.songMisses;
-			});
-			addCallback("getHits", function()
-			{
-				return PlayState.instance.songHits;
-			});
-
-			addCallback("setHealth", function(value:Float = 0)
-			{
-				PlayState.instance.health = value;
-			});
-			addCallback("addHealth", function(value:Float = 0)
-			{
-				PlayState.instance.health += value;
-			});
-			addCallback("getHealth", function()
-			{
-				return PlayState.instance.health;
-			});
-		}
 
 		addCallback("getColorFromHex", function(color:String)
 		{
@@ -1765,83 +1705,6 @@ class FunkinLua
 			}
 			return Reflect.getProperty(controller.justReleased, name) == true;
 		});
-		if (CoolUtil.curLuaState == 'playstate')
-		{
-			addCallback("keyJustPressed", function(name:String)
-			{
-				var key:Bool = false;
-				switch (name)
-				{
-					case 'left':
-						key = PlayState.instance.getControl('NOTE_LEFT_P');
-					case 'down':
-						key = PlayState.instance.getControl('NOTE_DOWN_P');
-					case 'up':
-						key = PlayState.instance.getControl('NOTE_UP_P');
-					case 'right':
-						key = PlayState.instance.getControl('NOTE_RIGHT_P');
-					case 'accept':
-						key = PlayState.instance.getControl('ACCEPT');
-					case 'back':
-						key = PlayState.instance.getControl('BACK');
-					case 'pause':
-						key = PlayState.instance.getControl('PAUSE');
-					case 'reset':
-						key = PlayState.instance.getControl('RESET');
-					case 'space':
-						key = FlxG.keys.justPressed.SPACE; // an extra key for convinience
-				}
-				return key;
-			});
-			addCallback("keyPressed", function(name:String)
-			{
-				var key:Bool = false;
-				switch (name)
-				{
-					case 'left':
-						key = PlayState.instance.getControl('NOTE_LEFT');
-					case 'down':
-						key = PlayState.instance.getControl('NOTE_DOWN');
-					case 'up':
-						key = PlayState.instance.getControl('NOTE_UP');
-					case 'right':
-						key = PlayState.instance.getControl('NOTE_RIGHT');
-					case 'space':
-						key = FlxG.keys.pressed.SPACE; // an extra key for convinience
-				}
-				return key;
-			});
-			addCallback("keyReleased", function(name:String)
-			{
-				var key:Bool = false;
-				switch (name)
-				{
-					case 'left':
-						key = PlayState.instance.getControl('NOTE_LEFT_R');
-					case 'down':
-						key = PlayState.instance.getControl('NOTE_DOWN_R');
-					case 'up':
-						key = PlayState.instance.getControl('NOTE_UP_R');
-					case 'right':
-						key = PlayState.instance.getControl('NOTE_RIGHT_R');
-					case 'space':
-						key = FlxG.keys.justReleased.SPACE; // an extra key for convinience
-				}
-				return key;
-			});
-			addCallback("addCharacterToList", function(name:String, type:String)
-			{
-				var charType:Int = 0;
-				switch (type.toLowerCase())
-				{
-					case 'dad':
-						charType = 1;
-					case 'gf' | 'girlfriend':
-						charType = 2;
-				}
-				PlayState.instance.addCharacterToList(name, charType);
-			});
-		}
 		addCallback("precacheImage", function(name:String)
 		{
 			Paths.returnGraphic(name);
@@ -1854,154 +1717,6 @@ class FunkinLua
 		{
 			CoolUtil.precacheMusic(name);
 		});
-		if (CoolUtil.curLuaState == 'playstate')
-		{
-			addCallback("triggerEvent", function(name:String, arg1:Dynamic, arg2:Dynamic)
-			{
-				var value1:String = arg1;
-				var value2:String = arg2;
-				PlayState.instance.triggerEventNote(name, value1, value2);
-				// trace('Triggered event: ' + name + ', ' + value1 + ', ' + value2);
-				return true;
-			});
-
-			addCallback("startCountdown", function()
-			{
-				PlayState.instance.startCountdown();
-				return true;
-			});
-			addCallback("endSong", function()
-			{
-				PlayState.instance.KillNotes();
-				PlayState.instance.endSong();
-				return true;
-			});
-			addCallback("restartSong", function(?skipTransition:Bool = false)
-			{
-				FunkinLua.curInstance.persistentUpdate = false;
-				PauseSubState.restartSong(skipTransition);
-				return true;
-			});
-			addCallback("exitSong", function(?skipTransition:Bool = false)
-			{
-				if (skipTransition)
-				{
-					FlxTransitionableState.skipNextTransIn = true;
-					FlxTransitionableState.skipNextTransOut = true;
-				}
-
-				PlayState.cancelMusicFadeTween();
-				CustomFadeTransition.nextCamera = PlayState.instance.camOther;
-				if (FlxTransitionableState.skipNextTransIn)
-					CustomFadeTransition.nextCamera = null;
-
-				if (PlayState.isStoryMode)
-					MusicBeatState.switchState(new StoryMenuState());
-				else
-					MusicBeatState.switchState(new FreeplayState());
-
-				FlxG.sound.playMusic(Paths.music('freakyMenu'));
-				PlayState.changedDifficulty = false;
-				PlayState.chartingMode = false;
-				PlayState.instance.transitioning = true;
-				WeekData.loadTheFirstEnabledMod();
-				return true;
-			});
-			addCallback("getSongPosition", function()
-			{
-				return Conductor.songPosition;
-			});
-
-			addCallback("getCharacterX", function(type:String)
-			{
-				switch (type.toLowerCase())
-				{
-					case 'dad' | 'opponent':
-						return PlayState.instance.dadGroup.x;
-					case 'gf' | 'girlfriend':
-						return PlayState.instance.gfGroup.x;
-					default:
-						return PlayState.instance.boyfriendGroup.x;
-				}
-			});
-			addCallback("setCharacterX", function(type:String, value:Float)
-			{
-				switch (type.toLowerCase())
-				{
-					case 'dad' | 'opponent':
-						PlayState.instance.dadGroup.x = value;
-					case 'gf' | 'girlfriend':
-						PlayState.instance.gfGroup.x = value;
-					default:
-						PlayState.instance.boyfriendGroup.x = value;
-				}
-			});
-			addCallback("getCharacterY", function(type:String)
-			{
-				switch (type.toLowerCase())
-				{
-					case 'dad' | 'opponent':
-						return PlayState.instance.dadGroup.y;
-					case 'gf' | 'girlfriend':
-						return PlayState.instance.gfGroup.y;
-					default:
-						return PlayState.instance.boyfriendGroup.y;
-				}
-			});
-			addCallback("setCharacterY", function(type:String, value:Float)
-			{
-				switch (type.toLowerCase())
-				{
-					case 'dad' | 'opponent':
-						PlayState.instance.dadGroup.y = value;
-					case 'gf' | 'girlfriend':
-						PlayState.instance.gfGroup.y = value;
-					default:
-						PlayState.instance.boyfriendGroup.y = value;
-				}
-			});
-			addCallback("cameraSetTarget", function(target:String)
-			{
-				var isDad:Bool = false;
-				if (target == 'dad')
-				{
-					isDad = true;
-				}
-				PlayState.instance.moveCamera(isDad);
-				return isDad;
-			});
-			addCallback("cameraShake", function(camera:String, intensity:Float, duration:Float)
-			{
-				cameraFromString(camera).shake(intensity, duration);
-			});
-
-			addCallback("cameraFlash", function(camera:String, color:String, duration:Float, forced:Bool)
-			{
-				var colorNum:Int = Std.parseInt(color);
-				if (!color.startsWith('0x'))
-					colorNum = Std.parseInt('0xff' + color);
-				cameraFromString(camera).flash(colorNum, duration, null, forced);
-			});
-			addCallback("cameraFade", function(camera:String, color:String, duration:Float, forced:Bool)
-			{
-				var colorNum:Int = Std.parseInt(color);
-				if (!color.startsWith('0x'))
-					colorNum = Std.parseInt('0xff' + color);
-				cameraFromString(camera).fade(colorNum, duration, false, null, forced);
-			});
-			addCallback("setRatingPercent", function(value:Float)
-			{
-				PlayState.instance.ratingPercent = value;
-			});
-			addCallback("setRatingName", function(value:String)
-			{
-				PlayState.instance.ratingName = value;
-			});
-			addCallback("setRatingFC", function(value:String)
-			{
-				PlayState.instance.ratingFC = value;
-			});
-		}
 		addCallback("getMouseX", function(camera:String)
 		{
 			var cam:FlxCamera = cameraFromString(camera);
@@ -2430,66 +2145,6 @@ class FunkinLua
 		{
 			return FunkinLua.curInstance.modchartSounds.exists(tag);
 		});
-		if (CoolUtil.curLuaState == 'playstate')
-		{
-			addCallback("setHealthBarColors", function(leftHex:String, rightHex:String)
-			{
-				var left:FlxColor = Std.parseInt(leftHex);
-				if (!leftHex.startsWith('0x'))
-					left = Std.parseInt('0xff' + leftHex);
-				var right:FlxColor = Std.parseInt(rightHex);
-				if (!rightHex.startsWith('0x'))
-					right = Std.parseInt('0xff' + rightHex);
-
-				PlayState.instance.healthBar.createFilledBar(left, right);
-				PlayState.instance.healthBar.updateBar();
-			});
-			addCallback("setTimeBarColors", function(leftHex:String, rightHex:String)
-			{
-				var left:FlxColor = Std.parseInt(leftHex);
-				if (!leftHex.startsWith('0x'))
-					left = Std.parseInt('0xff' + leftHex);
-				var right:FlxColor = Std.parseInt(rightHex);
-				if (!rightHex.startsWith('0x'))
-					right = Std.parseInt('0xff' + rightHex);
-
-				PlayState.instance.timeBar.createFilledBar(right, left);
-				PlayState.instance.timeBar.updateBar();
-			});
-
-			addCallback("setObjectCamera", function(obj:String, camera:String = '')
-			{
-				/*if(FunkinLua.curInstance.modchartSprites.exists(obj)) {
-						FunkinLua.curInstance.modchartSprites.get(obj).cameras = [cameraFromString(camera)];
-						return true;
-					}
-					else if(FunkinLua.curInstance.modchartTexts.exists(obj)) {
-						FunkinLua.curInstance.modchartTexts.get(obj).cameras = [cameraFromString(camera)];
-						return true;
-				}*/
-				var real = FunkinLua.curInstance.getLuaObject(obj);
-				if (real != null)
-				{
-					real.cameras = [cameraFromString(camera)];
-					return true;
-				}
-
-				var killMe:Array<String> = obj.split('.');
-				var object:FlxSprite = getObjectDirectly(killMe[0]);
-				if (killMe.length > 1)
-				{
-					object = getVarInArray(getPropertyLoopThingWhatever(killMe), killMe[killMe.length - 1]);
-				}
-
-				if (object != null)
-				{
-					object.cameras = [cameraFromString(camera)];
-					return true;
-				}
-				luaTrace("setObjectCamera: Object " + obj + " doesn't exist!", false, false, FlxColor.RED);
-				return false;
-			});
-		}
 		addCallback("setBlendMode", function(obj:String, blend:String = '')
 		{
 			var real = FunkinLua.curInstance.getLuaObject(obj);
@@ -2609,78 +2264,6 @@ class FunkinLua
 		{
 			return FlxG.random.bool(chance);
 		});
-		if (CoolUtil.curLuaState == 'playstate')
-		{
-			addCallback("startDialogue", function(dialogueFile:String, music:String = null)
-			{
-				var path:String;
-				#if MODS_ALLOWED
-				path = Paths.modsJson(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
-				if (!FileSystem.exists(path))
-				#end
-				path = Paths.json(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
-
-				luaTrace('startDialogue: Trying to load dialogue: ' + path);
-
-				#if MODS_ALLOWED
-				if (FileSystem.exists(path))
-				#else
-				if (Assets.exists(path))
-				#end
-				{
-					var shit:DialogueFile = DialogueBoxPsych.parseDialogue(path);
-					if (shit.dialogue.length > 0)
-					{
-						PlayState.instance.startDialogue(shit, music);
-						luaTrace('startDialogue: Successfully loaded dialogue', false, false, FlxColor.GREEN);
-						return true;
-					}
-					else
-					{
-						luaTrace('startDialogue: Your dialogue file is badly formatted!', false, false, FlxColor.RED);
-					}
-				}
-			else
-			{
-				luaTrace('startDialogue: Dialogue file not found', false, false, FlxColor.RED);
-				if (PlayState.instance.endingSong)
-				{
-					PlayState.instance.endSong();
-				}
-				else
-				{
-					PlayState.instance.startCountdown();
-				}
-			}
-				return false;
-			});
-			addCallback("startVideo", function(videoFile:String)
-			{
-				#if VIDEOS_ALLOWED
-				if (FileSystem.exists(Paths.video(videoFile)))
-				{
-					PlayState.instance.startVideo(videoFile);
-					return true;
-				}
-				else
-				{
-					luaTrace('startVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
-				}
-				return false;
-				#else
-				if (PlayState.instance.endingSong)
-				{
-					PlayState.instance.endSong();
-				}
-				else
-				{
-					PlayState.instance.startCountdown();
-				}
-				return true;
-				#end
-			});
-		}
-
 		addCallback("playMusic", function(sound:String, volume:Float = 1, loop:Bool = false)
 		{
 			FlxG.sound.playMusic(Paths.music(sound), volume, loop);
@@ -3396,8 +2979,10 @@ class FunkinLua
 
 		addCallback("loadSong", function(?name:String = null, ?difficultyNum:Int = -1)
 		{
+			luaTrace("loadSong is deprecated! Use enterSong instead", false, true);
 			if (CoolUtil.curLuaState == 'playstate')
 			{
+				trace('ok dude');
 				if (name == null || name.length < 1)
 					name = PlayState.SONG.song;
 				if (difficultyNum == -1)
@@ -3417,14 +3002,20 @@ class FunkinLua
 					PlayState.instance.vocals.volume = 0;
 				}
 			}
-			else
+		});
+
+		addCallback('enterSong', function(name:String, diff:String) {
+			PlayState.SONG = Song.loadFromJson('$name-$diff', name);
+			PlayState.storyDifficulty = CoolUtil.difficulties.indexOf(diff);
+			if (CoolUtil.curLuaState == 'playstate')
+				PlayState.instance.persistentUpdate = false;
+			LoadingState.loadAndSwitchState(new PlayState());
+			FlxG.sound.music.pause();
+			FlxG.sound.music.volume = 0;
+			if (CoolUtil.curLuaState == 'playstate' && PlayState.instance.vocals != null)
 			{
-				if (difficultyNum == -1)
-					difficultyNum = 0;
-				var poop = Highscore.formatSong(name, difficultyNum);
-				PlayState.SONG = Song.loadFromJson(poop, name);
-				PlayState.storyDifficulty = difficultyNum;
-				LoadingState.loadAndSwitchState(new PlayState());
+				PlayState.instance.vocals.pause();
+				PlayState.instance.vocals.volume = 0;
 			}
 		});
 
@@ -3544,7 +3135,6 @@ class FunkinLua
 							PlayState.instance.boyfriend.dance();
 					}
 				});
-
 				addCallback("noteTweenX", function(tag:String, note:Int, value:Dynamic, duration:Float, ease:String)
 				{
 					cancelTween(tag);
@@ -3621,6 +3211,401 @@ class FunkinLua
 						}));
 					}
 				});
+				addCallback("addScore", function(value:Int = 0)
+				{
+					PlayState.instance.songScore += value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("addMisses", function(value:Int = 0)
+				{
+					PlayState.instance.songMisses += value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("addHits", function(value:Int = 0)
+				{
+					PlayState.instance.songHits += value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("setScore", function(value:Int = 0)
+				{
+					PlayState.instance.songScore = value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("setMisses", function(value:Int = 0)
+				{
+					PlayState.instance.songMisses = value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("setHits", function(value:Int = 0)
+				{
+					PlayState.instance.songHits = value;
+					PlayState.instance.RecalculateRating();
+				});
+				addCallback("getScore", function()
+				{
+					return PlayState.instance.songScore;
+				});
+				addCallback("getMisses", function()
+				{
+					return PlayState.instance.songMisses;
+				});
+				addCallback("getHits", function()
+				{
+					return PlayState.instance.songHits;
+				});
+				addCallback("setHealth", function(value:Float = 0)
+				{
+					PlayState.instance.health = value;
+				});
+				addCallback("addHealth", function(value:Float = 0)
+				{
+					PlayState.instance.health += value;
+				});
+				addCallback("getHealth", function()
+				{
+					return PlayState.instance.health;
+				});
+				addCallback("startDialogue", function(dialogueFile:String, music:String = null)
+				{
+					var path:String;
+					#if MODS_ALLOWED
+					path = Paths.modsJson(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
+					if (!FileSystem.exists(path))
+					#end
+					path = Paths.json(Paths.formatToSongPath(PlayState.SONG.song) + '/' + dialogueFile);
+	
+					luaTrace('startDialogue: Trying to load dialogue: ' + path);
+	
+					#if MODS_ALLOWED
+					if (FileSystem.exists(path))
+					#else
+					if (Assets.exists(path))
+					#end
+					{
+						var shit:DialogueFile = DialogueBoxPsych.parseDialogue(path);
+						if (shit.dialogue.length > 0)
+						{
+							PlayState.instance.startDialogue(shit, music);
+							luaTrace('startDialogue: Successfully loaded dialogue', false, false, FlxColor.GREEN);
+							return true;
+						}
+						else
+						{
+							luaTrace('startDialogue: Your dialogue file is badly formatted!', false, false, FlxColor.RED);
+						}
+					}
+				else
+				{
+					luaTrace('startDialogue: Dialogue file not found', false, false, FlxColor.RED);
+					if (PlayState.instance.endingSong)
+					{
+						PlayState.instance.endSong();
+					}
+					else
+					{
+						PlayState.instance.startCountdown();
+					}
+				}
+					return false;
+				});
+				addCallback("startVideo", function(videoFile:String)
+				{
+					#if VIDEOS_ALLOWED
+					if (FileSystem.exists(Paths.video(videoFile)))
+					{
+						PlayState.instance.startVideo(videoFile);
+						return true;
+					}
+					else
+					{
+						luaTrace('startVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
+					}
+					return false;
+					#else
+					if (PlayState.instance.endingSong)
+					{
+						PlayState.instance.endSong();
+					}
+					else
+					{
+						PlayState.instance.startCountdown();
+					}
+					return true;
+					#end
+				});
+				addCallback("keyJustPressed", function(name:String)
+				{
+					var key:Bool = false;
+					switch (name)
+					{
+						case 'left':
+							key = PlayState.instance.getControl('NOTE_LEFT_P');
+						case 'down':
+							key = PlayState.instance.getControl('NOTE_DOWN_P');
+						case 'up':
+							key = PlayState.instance.getControl('NOTE_UP_P');
+						case 'right':
+							key = PlayState.instance.getControl('NOTE_RIGHT_P');
+						case 'accept':
+							key = PlayState.instance.getControl('ACCEPT');
+						case 'back':
+							key = PlayState.instance.getControl('BACK');
+						case 'pause':
+							key = PlayState.instance.getControl('PAUSE');
+						case 'reset':
+							key = PlayState.instance.getControl('RESET');
+						case 'space':
+							key = FlxG.keys.justPressed.SPACE; // an extra key for convinience
+					}
+					return key;
+				});
+				addCallback("keyPressed", function(name:String)
+				{
+					var key:Bool = false;
+					switch (name)
+					{
+						case 'left':
+							key = PlayState.instance.getControl('NOTE_LEFT');
+						case 'down':
+							key = PlayState.instance.getControl('NOTE_DOWN');
+						case 'up':
+							key = PlayState.instance.getControl('NOTE_UP');
+						case 'right':
+							key = PlayState.instance.getControl('NOTE_RIGHT');
+						case 'space':
+							key = FlxG.keys.pressed.SPACE; // an extra key for convinience
+					}
+					return key;
+				});
+				addCallback("keyReleased", function(name:String)
+				{
+					var key:Bool = false;
+					switch (name)
+					{
+						case 'left':
+							key = PlayState.instance.getControl('NOTE_LEFT_R');
+						case 'down':
+							key = PlayState.instance.getControl('NOTE_DOWN_R');
+						case 'up':
+							key = PlayState.instance.getControl('NOTE_UP_R');
+						case 'right':
+							key = PlayState.instance.getControl('NOTE_RIGHT_R');
+						case 'space':
+							key = FlxG.keys.justReleased.SPACE; // an extra key for convinience
+					}
+					return key;
+				});
+				addCallback("addCharacterToList", function(name:String, type:String)
+				{
+					var charType:Int = 0;
+					switch (type.toLowerCase())
+					{
+						case 'dad':
+							charType = 1;
+						case 'gf' | 'girlfriend':
+							charType = 2;
+					}
+					PlayState.instance.addCharacterToList(name, charType);
+				});
+				addCallback("setHealthBarColors", function(leftHex:String, rightHex:String)
+				{
+					var left:FlxColor = Std.parseInt(leftHex);
+					if (!leftHex.startsWith('0x'))
+						left = Std.parseInt('0xff' + leftHex);
+					var right:FlxColor = Std.parseInt(rightHex);
+					if (!rightHex.startsWith('0x'))
+						right = Std.parseInt('0xff' + rightHex);
+	
+					PlayState.instance.healthBar.createFilledBar(left, right);
+					PlayState.instance.healthBar.updateBar();
+				});
+				addCallback("setTimeBarColors", function(leftHex:String, rightHex:String)
+				{
+					var left:FlxColor = Std.parseInt(leftHex);
+					if (!leftHex.startsWith('0x'))
+						left = Std.parseInt('0xff' + leftHex);
+					var right:FlxColor = Std.parseInt(rightHex);
+					if (!rightHex.startsWith('0x'))
+						right = Std.parseInt('0xff' + rightHex);
+	
+					PlayState.instance.timeBar.createFilledBar(right, left);
+					PlayState.instance.timeBar.updateBar();
+				});
+	
+				addCallback("setObjectCamera", function(obj:String, camera:String = '')
+				{
+					/*if(FunkinLua.curInstance.modchartSprites.exists(obj)) {
+							FunkinLua.curInstance.modchartSprites.get(obj).cameras = [cameraFromString(camera)];
+							return true;
+						}
+						else if(FunkinLua.curInstance.modchartTexts.exists(obj)) {
+							FunkinLua.curInstance.modchartTexts.get(obj).cameras = [cameraFromString(camera)];
+							return true;
+					}*/
+					var real = FunkinLua.curInstance.getLuaObject(obj);
+					if (real != null)
+					{
+						real.cameras = [cameraFromString(camera)];
+						return true;
+					}
+	
+					var killMe:Array<String> = obj.split('.');
+					var object:FlxSprite = getObjectDirectly(killMe[0]);
+					if (killMe.length > 1)
+					{
+						object = getVarInArray(getPropertyLoopThingWhatever(killMe), killMe[killMe.length - 1]);
+					}
+	
+					if (object != null)
+					{
+						object.cameras = [cameraFromString(camera)];
+						return true;
+					}
+					luaTrace("setObjectCamera: Object " + obj + " doesn't exist!", false, false, FlxColor.RED);
+					return false;
+				});
+				addCallback("triggerEvent", function(name:String, arg1:Dynamic, arg2:Dynamic)
+				{
+					var value1:String = arg1;
+					var value2:String = arg2;
+					PlayState.instance.triggerEventNote(name, value1, value2);
+					// trace('Triggered event: ' + name + ', ' + value1 + ', ' + value2);
+					return true;
+				});
+				addCallback("startCountdown", function()
+				{
+					PlayState.instance.startCountdown();
+					return true;
+				});
+				addCallback("endSong", function()
+				{
+					PlayState.instance.KillNotes();
+					PlayState.instance.endSong();
+					return true;
+				});
+				addCallback("restartSong", function(?skipTransition:Bool = false)
+				{
+					FunkinLua.curInstance.persistentUpdate = false;
+					PauseSubState.restartSong(skipTransition);
+					return true;
+				});
+				addCallback("exitSong", function(?skipTransition:Bool = false)
+				{
+					if (skipTransition)
+					{
+						FlxTransitionableState.skipNextTransIn = true;
+						FlxTransitionableState.skipNextTransOut = true;
+					}
+	
+					PlayState.cancelMusicFadeTween();
+					CustomFadeTransition.nextCamera = PlayState.instance.camOther;
+					if (FlxTransitionableState.skipNextTransIn)
+						CustomFadeTransition.nextCamera = null;
+	
+					if (PlayState.isStoryMode)
+						MusicBeatState.switchState(new StoryMenuState());
+					else
+						MusicBeatState.switchState(new FreeplayState());
+	
+					FlxG.sound.playMusic(Paths.music('freakyMenu'));
+					PlayState.changedDifficulty = false;
+					PlayState.chartingMode = false;
+					PlayState.instance.transitioning = true;
+					WeekData.loadTheFirstEnabledMod();
+					return true;
+				});
+				addCallback("getSongPosition", function()
+				{
+					return Conductor.songPosition;
+				});
+				addCallback("getCharacterX", function(type:String)
+				{
+					switch (type.toLowerCase())
+					{
+						case 'dad' | 'opponent':
+							return PlayState.instance.dadGroup.x;
+						case 'gf' | 'girlfriend':
+							return PlayState.instance.gfGroup.x;
+						default:
+							return PlayState.instance.boyfriendGroup.x;
+					}
+				});
+				addCallback("setCharacterX", function(type:String, value:Float)
+				{
+					switch (type.toLowerCase())
+					{
+						case 'dad' | 'opponent':
+							PlayState.instance.dadGroup.x = value;
+						case 'gf' | 'girlfriend':
+							PlayState.instance.gfGroup.x = value;
+						default:
+							PlayState.instance.boyfriendGroup.x = value;
+					}
+				});
+				addCallback("getCharacterY", function(type:String)
+				{
+					switch (type.toLowerCase())
+					{
+						case 'dad' | 'opponent':
+							return PlayState.instance.dadGroup.y;
+						case 'gf' | 'girlfriend':
+							return PlayState.instance.gfGroup.y;
+						default:
+							return PlayState.instance.boyfriendGroup.y;
+					}
+				});
+				addCallback("setCharacterY", function(type:String, value:Float)
+				{
+					switch (type.toLowerCase())
+					{
+						case 'dad' | 'opponent':
+							PlayState.instance.dadGroup.y = value;
+						case 'gf' | 'girlfriend':
+							PlayState.instance.gfGroup.y = value;
+						default:
+							PlayState.instance.boyfriendGroup.y = value;
+					}
+				});
+				addCallback("cameraSetTarget", function(target:String)
+				{
+					var isDad:Bool = false;
+					if (target == 'dad')
+					{
+						isDad = true;
+					}
+					PlayState.instance.moveCamera(isDad);
+					return isDad;
+				});
+				addCallback("cameraShake", function(camera:String, intensity:Float, duration:Float)
+				{
+					cameraFromString(camera).shake(intensity, duration);
+				});
+				addCallback("cameraFlash", function(camera:String, color:String, duration:Float, forced:Bool)
+				{
+					var colorNum:Int = Std.parseInt(color);
+					if (!color.startsWith('0x'))
+						colorNum = Std.parseInt('0xff' + color);
+					cameraFromString(camera).flash(colorNum, duration, null, forced);
+				});
+				addCallback("cameraFade", function(camera:String, color:String, duration:Float, forced:Bool)
+				{
+					var colorNum:Int = Std.parseInt(color);
+					if (!color.startsWith('0x'))
+						colorNum = Std.parseInt('0xff' + color);
+					cameraFromString(camera).fade(colorNum, duration, false, null, forced);
+				});
+				addCallback("setRatingPercent", function(value:Float)
+				{
+					PlayState.instance.ratingPercent = value;
+				});
+				addCallback("setRatingName", function(value:String)
+				{
+					PlayState.instance.ratingName = value;
+				});
+				addCallback("setRatingFC", function(value:String)
+				{
+					PlayState.instance.ratingFC = value;
+				});
 			// im gotta add the rest here at some point but not rn
 			case 'titlestate':
 				addCallback('createCoolText', function(text:Array<String>, ?offset:Float)
@@ -3684,12 +3669,9 @@ class FunkinLua
 					}
 				});
 		}
-
-		if (CoolUtil.inCustomState)
-		{
-			// maybe add stuff here??
-		}
-
+		addCallback('controls', function(control:String) {
+			return Reflect.field(PlayerSettings.player1.controls, control);
+		});
 		call('onCreate', []);
 		#end
 	}
