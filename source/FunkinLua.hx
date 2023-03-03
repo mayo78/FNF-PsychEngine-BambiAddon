@@ -3670,7 +3670,7 @@ class FunkinLua
 				});
 		}
 		addCallback('controls', function(control:String) {
-			return Reflect.field(PlayerSettings.player1.controls, control);
+			return Reflect.getProperty(PlayerSettings.player1.controls, control);
 		});
 		call('onCreate', []);
 		#end
